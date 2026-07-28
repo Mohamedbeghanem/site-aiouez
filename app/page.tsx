@@ -181,8 +181,22 @@ export default function Home() {
         <span>Proximité</span>
       </section>
 
-      <div className="editorial-ribbon" aria-hidden="true">
-        <span>Audit</span><i>◆</i><span>Expertise</span><i>◆</i><span>Conseil</span>
+      <div
+        className="editorial-ribbon"
+        aria-label="Audit, Expertise, Conseil"
+      >
+        <div className="ribbon-track" aria-hidden="true">
+          {[0, 1].map((copy) => (
+            <div className="ribbon-group" key={copy}>
+              <span>Audit</span>
+              <i>◆</i>
+              <span>Expertise</span>
+              <i>◆</i>
+              <span>Conseil</span>
+              <i>◆</i>
+            </div>
+          ))}
+        </div>
       </div>
 
       <section className="about section" id="cabinet">
