@@ -31,7 +31,7 @@ export async function generateMetadata(): Promise<Metadata> {
       shortcut: "/logo-aiouez.svg",
     },
     openGraph: {
-      title: "Cabinet Aiouez — Certifier vos comptes. Sécuriser vos décisions.",
+      title: "Cabinet Aiouez — Vos comptes méritent un regard de confiance",
       description:
         "Commissaire aux comptes et comptable agréé à Alger.",
       type: "website",
@@ -50,7 +50,7 @@ export async function generateMetadata(): Promise<Metadata> {
     twitter: {
       card: "summary_large_image",
       title: "Cabinet Aiouez — Audit & Conseil",
-      description: "Certifier vos comptes. Sécuriser vos décisions.",
+      description: "Vos comptes méritent un regard de confiance.",
       images: [`${baseUrl}/og.png`],
     },
   };

@@ -33,7 +33,7 @@ test("server-renders the finished Cabinet Aiouez site", async () => {
   const html = await response.text();
   assert.match(html, /<html[^>]+lang="fr"/i);
   assert.match(html, /Cabinet Aiouez \| Commissaire aux comptes à Alger/);
-  assert.match(html, /Certifier vos comptes/);
+  assert.match(html, /Vos comptes méritent/);
   assert.match(html, /Commissaire aux comptes/);
   assert.match(html, /Commissariat aux comptes/);
   assert.match(html, /Expertise comptable/);
