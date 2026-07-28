@@ -38,6 +38,8 @@ const audiences = [
 
 export default function Home() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [activeService, setActiveService] = useState(0);
+  const selectedService = services[activeService];
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -159,6 +161,13 @@ export default function Home() {
             <strong>+15 ans</strong>
             <small>à vos côtés</small>
           </div>
+          <div className="audit-note">
+            <span className="audit-note-icon">✓</span>
+            <div>
+              <small>Opinion & certification</small>
+              <strong>Une information financière fiable</strong>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -172,6 +181,10 @@ export default function Home() {
         <span>Proximité</span>
       </section>
 
+      <div className="editorial-ribbon" aria-hidden="true">
+        <span>Audit</span><i>◆</i><span>Expertise</span><i>◆</i><span>Conseil</span>
+      </div>
+
       <section className="about section" id="cabinet">
         <div className="about-label">
           <span className="section-number">01</span>
@@ -182,17 +195,33 @@ export default function Home() {
             La rigueur d’un auditeur.
             <span>La proximité d’un partenaire.</span>
           </h2>
-          <div className="about-copy">
-            <p>
-              Basé à Alger, le Cabinet Aiouez intervient auprès des dirigeants,
-              entrepreneurs et organisations qui recherchent un accompagnement
-              fiable, indépendant et réellement adapté à leur activité.
-            </p>
-            <p>
-              Notre rôle ne s’arrête pas aux chiffres : nous les rendons
-              compréhensibles pour sécuriser vos obligations et donner plus de
-              clarté à vos décisions.
-            </p>
+          <div className="about-layout">
+            <div className="about-visual">
+              <img
+                src="https://images.unsplash.com/photo-1450101499163-c8848c66ca85?auto=format&fit=crop&w=1200&q=85"
+                alt="Documents financiers examinés par un professionnel"
+              />
+              <div className="visual-quote">
+                <span>“</span>
+                <p>Rendre les chiffres lisibles pour rendre les décisions plus sûres.</p>
+              </div>
+            </div>
+            <div className="about-copy">
+              <p>
+                Basé à Alger, le Cabinet Aiouez intervient auprès des dirigeants,
+                entrepreneurs et organisations qui recherchent un accompagnement
+                fiable, indépendant et réellement adapté à leur activité.
+              </p>
+              <p>
+                Notre rôle ne s’arrête pas aux chiffres : nous les rendons
+                compréhensibles pour sécuriser vos obligations et donner plus de
+                clarté à vos décisions.
+              </p>
+              <div className="about-signature">
+                <strong>Cabinet Aiouez</strong>
+                <span>Commissaire aux comptes · Alger</span>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -211,22 +240,42 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="service-list">
-            {services.map((service) => (
-              <article key={service.number}>
-                <span className="service-number">{service.number}</span>
-                <div className="service-title">
-                  <h3>{service.title}</h3>
-                  <span aria-hidden="true">↗</span>
-                </div>
-                <p>{service.text}</p>
-                <ul>
-                  {service.details.map((detail) => (
-                    <li key={detail}>{detail}</li>
-                  ))}
-                </ul>
-              </article>
-            ))}
+          <div className="expertise-studio">
+            <div className="service-tabs" role="tablist" aria-label="Domaines d’expertise">
+              {services.map((service, index) => (
+                <button
+                  key={service.number}
+                  type="button"
+                  role="tab"
+                  aria-selected={activeService === index}
+                  className={activeService === index ? "active" : ""}
+                  onClick={() => setActiveService(index)}
+                >
+                  <span>{service.number}</span>
+                  <strong>{service.title}</strong>
+                  <i aria-hidden="true">→</i>
+                </button>
+              ))}
+            </div>
+
+            <article className="service-feature" role="tabpanel">
+              <div className="feature-orbit" aria-hidden="true" />
+              <div className="feature-top">
+                <span>Expertise / {selectedService.number}</span>
+                <span>Cabinet Aiouez</span>
+              </div>
+              <div className="feature-main">
+                <span className="feature-index">{selectedService.number}</span>
+                <h3>{selectedService.title}</h3>
+                <p>{selectedService.text}</p>
+              </div>
+              <ul>
+                {selectedService.details.map((detail) => (
+                  <li key={detail}><span>✓</span>{detail}</li>
+                ))}
+              </ul>
+              <a href="#contact">Parler à un expert <span aria-hidden="true">↗</span></a>
+            </article>
           </div>
         </div>
       </section>
@@ -270,6 +319,35 @@ export default function Home() {
         </div>
       </section>
 
+      <section className="assurance">
+        <div className="section assurance-inner">
+          <div className="assurance-photo">
+            <img
+              src="https://images.unsplash.com/photo-1556761175-b413da4baf72?auto=format&fit=crop&w=1400&q=85"
+              alt="Réunion professionnelle autour de documents de gestion"
+            />
+            <div className="assurance-stamp">
+              <span>100%</span>
+              <small>confidentiel</small>
+            </div>
+          </div>
+          <div className="assurance-copy">
+            <span className="kicker">Une relation durable</span>
+            <h2>Votre entreprise n’est pas un dossier parmi d’autres.</h2>
+            <p>
+              Un interlocuteur attentif, des échanges directs et une lecture
+              précise de vos enjeux. Notre accompagnement s’adapte à votre
+              organisation, à votre secteur et à votre rythme.
+            </p>
+            <div className="assurance-points">
+              <div><strong>Indépendance</strong><span>Un regard objectif sur vos comptes</span></div>
+              <div><strong>Disponibilité</strong><span>Des réponses claires, sans détour</span></div>
+              <div><strong>Continuité</strong><span>Une connaissance durable de votre activité</span></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section className="audiences">
         <div className="section audiences-inner">
           <div>
@@ -287,10 +365,40 @@ export default function Home() {
         </div>
       </section>
 
+      <section className="insights section">
+        <div className="insights-heading">
+          <div className="about-label">
+            <span className="section-number">05</span>
+            <span>Repères & conseils</span>
+          </div>
+          <h2>Comprendre aujourd’hui. Anticiper demain.</h2>
+        </div>
+        <div className="insight-grid">
+          <article>
+            <span>Audit légal</span>
+            <h3>Bien préparer une mission de commissariat aux comptes</h3>
+            <p>Les documents, interlocuteurs et étapes à anticiper pour une mission fluide.</p>
+            <a href="#contact">En discuter avec le cabinet ↗</a>
+          </article>
+          <article>
+            <span>Clôture comptable</span>
+            <h3>Transformer la clôture en outil de pilotage</h3>
+            <p>Au-delà de l’obligation, faire des états financiers un véritable support de décision.</p>
+            <a href="#contact">En discuter avec le cabinet ↗</a>
+          </article>
+          <article>
+            <span>Fiscalité</span>
+            <h3>Sécuriser vos déclarations et vos échéances</h3>
+            <p>Une organisation rigoureuse pour limiter les risques et conserver une vision claire.</p>
+            <a href="#contact">En discuter avec le cabinet ↗</a>
+          </article>
+        </div>
+      </section>
+
       <section className="contact section" id="contact">
         <div className="contact-copy">
           <div className="about-label">
-            <span className="section-number">04</span>
+            <span className="section-number">06</span>
             <span>Contact</span>
           </div>
           <h2>Parlons de votre entreprise.</h2>

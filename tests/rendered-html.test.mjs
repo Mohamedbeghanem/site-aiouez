@@ -37,7 +37,9 @@ test("server-renders the finished Cabinet Aiouez site", async () => {
   assert.match(html, /Commissaire aux comptes/);
   assert.match(html, /Commissariat aux comptes/);
   assert.match(html, /Expertise comptable/);
-  assert.match(html, /Conseil fiscal/);
+  assert.match(html, /Fiscalité/);
+  assert.match(html, /Comprendre aujourd’hui/);
+  assert.match(html, /Votre entreprise n’est pas un dossier/);
   assert.match(html, /Djasr Kasentina, Alger/);
   assert.match(html, /rahim@aouiz-dz\.com/);
   assert.doesNotMatch(html, /codex-preview|Building your site|SkeletonPreview/);
