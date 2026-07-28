@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 
 const services = [
   {
@@ -40,6 +40,42 @@ export default function Home() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [activeService, setActiveService] = useState(0);
   const selectedService = services[activeService];
+
+  useEffect(() => {
+    const reducedMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+
+    if (reducedMotion) return;
+
+    const root = document.documentElement;
+    const revealElements = Array.from(
+      document.querySelectorAll<HTMLElement>("[data-reveal]"),
+    );
+
+    root.classList.add("motion-enabled");
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          entry.target.classList.add("is-visible");
+          observer.unobserve(entry.target);
+        });
+      },
+      {
+        threshold: 0.14,
+        rootMargin: "0px 0px -8% 0px",
+      },
+    );
+
+    revealElements.forEach((element) => observer.observe(element));
+
+    return () => {
+      observer.disconnect();
+      root.classList.remove("motion-enabled");
+    };
+  }, []);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -200,17 +236,17 @@ export default function Home() {
       </div>
 
       <section className="about section" id="cabinet">
-        <div className="about-label">
+        <div className="about-label" data-reveal="left">
           <span className="section-number">01</span>
           <span>Le cabinet</span>
         </div>
         <div className="about-statement">
-          <h2>
+          <h2 data-reveal="up">
             La rigueur d’un auditeur.
             <span>La proximité d’un partenaire.</span>
           </h2>
           <div className="about-layout">
-            <div className="about-visual">
+            <div className="about-visual" data-reveal="scale">
               <img
                 src="https://images.unsplash.com/photo-1450101499163-c8848c66ca85?auto=format&fit=crop&w=1200&q=85"
                 alt="Documents financiers examinés par un professionnel"
@@ -220,7 +256,7 @@ export default function Home() {
                 <p>Rendre les chiffres lisibles pour rendre les décisions plus sûres.</p>
               </div>
             </div>
-            <div className="about-copy">
+            <div className="about-copy" data-reveal="right">
               <p>
                 Basé à Alger, le Cabinet Aiouez intervient auprès des dirigeants,
                 entrepreneurs et organisations qui recherchent un accompagnement
@@ -242,7 +278,7 @@ export default function Home() {
 
       <section className="services" id="expertises">
         <div className="section services-inner">
-          <div className="section-heading">
+          <div className="section-heading" data-reveal="left">
             <div className="about-label">
               <span className="section-number">02</span>
               <span>Nos expertises</span>
@@ -254,7 +290,7 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="expertise-studio">
+          <div className="expertise-studio" data-reveal="right">
             <div className="service-tabs" role="tablist" aria-label="Domaines d’expertise">
               {services.map((service, index) => (
                 <button
@@ -295,7 +331,7 @@ export default function Home() {
       </section>
 
       <section className="approach section" id="approche">
-        <div className="approach-card">
+        <div className="approach-card" data-reveal="scale">
           <div className="approach-copy">
             <div className="about-label light-label">
               <span className="section-number">03</span>
@@ -335,7 +371,7 @@ export default function Home() {
 
       <section className="assurance">
         <div className="section assurance-inner">
-          <div className="assurance-photo">
+          <div className="assurance-photo" data-reveal="left">
             <img
               src="https://images.unsplash.com/photo-1556761175-b413da4baf72?auto=format&fit=crop&w=1400&q=85"
               alt="Réunion professionnelle autour de documents de gestion"
@@ -345,7 +381,7 @@ export default function Home() {
               <small>confidentiel</small>
             </div>
           </div>
-          <div className="assurance-copy">
+          <div className="assurance-copy" data-reveal="right">
             <span className="kicker">Une relation durable</span>
             <h2>Votre entreprise n’est pas un dossier parmi d’autres.</h2>
             <p>
@@ -364,13 +400,13 @@ export default function Home() {
 
       <section className="audiences">
         <div className="section audiences-inner">
-          <div>
+          <div data-reveal="left">
             <span className="kicker">Des solutions à votre échelle</span>
             <h2>À chaque structure, une réponse adaptée.</h2>
           </div>
           <div className="audience-grid">
             {audiences.map((audience, index) => (
-              <div key={audience}>
+              <div data-reveal="up" key={audience}>
                 <span>0{index + 1}</span>
                 <strong>{audience}</strong>
               </div>
@@ -380,7 +416,7 @@ export default function Home() {
       </section>
 
       <section className="insights section">
-        <div className="insights-heading">
+        <div className="insights-heading" data-reveal="up">
           <div className="about-label">
             <span className="section-number">05</span>
             <span>Repères & conseils</span>
@@ -388,19 +424,19 @@ export default function Home() {
           <h2>Comprendre aujourd’hui. Anticiper demain.</h2>
         </div>
         <div className="insight-grid">
-          <article>
+          <article data-reveal="up">
             <span>Audit légal</span>
             <h3>Bien préparer une mission de commissariat aux comptes</h3>
             <p>Les documents, interlocuteurs et étapes à anticiper pour une mission fluide.</p>
             <a href="#contact">En discuter avec le cabinet ↗</a>
           </article>
-          <article>
+          <article data-reveal="up">
             <span>Clôture comptable</span>
             <h3>Transformer la clôture en outil de pilotage</h3>
             <p>Au-delà de l’obligation, faire des états financiers un véritable support de décision.</p>
             <a href="#contact">En discuter avec le cabinet ↗</a>
           </article>
-          <article>
+          <article data-reveal="up">
             <span>Fiscalité</span>
             <h3>Sécuriser vos déclarations et vos échéances</h3>
             <p>Une organisation rigoureuse pour limiter les risques et conserver une vision claire.</p>
@@ -410,7 +446,7 @@ export default function Home() {
       </section>
 
       <section className="contact section" id="contact">
-        <div className="contact-copy">
+        <div className="contact-copy" data-reveal="left">
           <div className="about-label">
             <span className="section-number">06</span>
             <span>Contact</span>
@@ -436,7 +472,7 @@ export default function Home() {
           </div>
         </div>
 
-        <form className="contact-form" onSubmit={handleSubmit}>
+        <form className="contact-form" data-reveal="right" onSubmit={handleSubmit}>
           <div className="form-row">
             <label>
               <span>Nom et prénom *</span>
