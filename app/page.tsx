@@ -77,6 +77,30 @@ export default function Home() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!menuOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setMenuOpen(false);
+    }
+
+    function handleResize() {
+      if (window.innerWidth > 1080) setMenuOpen(false);
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("resize", handleResize);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("resize", handleResize);
+    };
+  }, [menuOpen]);
+
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
@@ -102,7 +126,7 @@ export default function Home() {
         <a href="tel:+213541310255">+213 (0) 541 31 02 55</a>
       </div>
 
-      <header className="header">
+      <header className={`header ${menuOpen ? "menu-active" : ""}`}>
         <a className="logo" href="#accueil" aria-label="Aiouez — Accueil">
           <img src="/logo-aiouez.svg" alt="Aiouez — Commissaire aux comptes" />
         </a>
@@ -119,10 +143,11 @@ export default function Home() {
         </a>
 
         <button
-          className="menu-toggle"
+          className={`menu-toggle ${menuOpen ? "is-open" : ""}`}
           type="button"
           aria-label={menuOpen ? "Fermer le menu" : "Ouvrir le menu"}
           aria-expanded={menuOpen}
+          aria-controls="mobile-navigation"
           onClick={() => setMenuOpen((open) => !open)}
         >
           <span />
@@ -130,11 +155,40 @@ export default function Home() {
         </button>
 
         {menuOpen && (
-          <nav className="mobile-menu" aria-label="Navigation mobile">
-            <a href="#cabinet" onClick={closeMenu}>Le cabinet</a>
-            <a href="#expertises" onClick={closeMenu}>Expertises</a>
-            <a href="#approche" onClick={closeMenu}>Notre approche</a>
-            <a href="#contact" onClick={closeMenu}>Demander un devis</a>
+          <nav
+            className="mobile-menu"
+            id="mobile-navigation"
+            aria-label="Navigation mobile"
+          >
+            <div className="mobile-menu-eyebrow">
+              <span>Navigation</span>
+              <small>Cabinet Aiouez · Alger</small>
+            </div>
+
+            <div className="mobile-menu-links">
+              <a href="#cabinet" onClick={closeMenu}>
+                <span>01</span><strong>Le cabinet</strong><i aria-hidden="true">↗</i>
+              </a>
+              <a href="#expertises" onClick={closeMenu}>
+                <span>02</span><strong>Expertises</strong><i aria-hidden="true">↗</i>
+              </a>
+              <a href="#approche" onClick={closeMenu}>
+                <span>03</span><strong>Notre approche</strong><i aria-hidden="true">↗</i>
+              </a>
+              <a href="#contact" onClick={closeMenu}>
+                <span>04</span><strong>Demander un devis</strong><i aria-hidden="true">↗</i>
+              </a>
+            </div>
+
+            <div className="mobile-menu-footer">
+              <div>
+                <small>Commissaire aux comptes</small>
+                <strong>Indépendance · Rigueur · Confiance</strong>
+              </div>
+              <a href="tel:+213541310255">
+                Appeler le cabinet <span aria-hidden="true">→</span>
+              </a>
+            </div>
           </nav>
         )}
       </header>
