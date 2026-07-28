@@ -522,6 +522,17 @@ export default function Home() {
         <div className="footer-bottom">
           <span>© 2026 Cabinet Aiouez. Tous droits réservés.</span>
           <span>Alger · Algérie</span>
+          <a
+            className="evotechly-credit"
+            href="https://evotechly.com/"
+            target="_blank"
+            rel="noreferrer"
+            aria-label="Site créé par Evotechly — ouvrir le site"
+          >
+            <span>Made by</span>
+            <strong>Evotechly</strong>
+            <i aria-hidden="true">↗</i>
+          </a>
         </div>
       </footer>
     </main>

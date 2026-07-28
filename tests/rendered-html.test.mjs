@@ -42,6 +42,9 @@ test("server-renders the finished Cabinet Aiouez site", async () => {
   assert.match(html, /Votre entreprise n’est pas un dossier/);
   assert.match(html, /Djasr Kasentina, Alger/);
   assert.match(html, /rahim@aouiz-dz\.com/);
+  assert.match(html, /https:\/\/evotechly\.com\//);
+  assert.match(html, /Made by/);
+  assert.match(html, /Evotechly/);
   assert.doesNotMatch(html, /codex-preview|Building your site|SkeletonPreview/);
 });
 
