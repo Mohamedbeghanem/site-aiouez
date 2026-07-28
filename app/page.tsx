@@ -589,6 +589,16 @@ export default function Home() {
           </a>
         </div>
       </footer>
+
+      <a
+        className="whatsapp-button"
+        href="https://wa.me/213541310255"
+        target="_blank"
+        rel="noreferrer"
+        aria-label="Contacter le Cabinet Aiouez sur WhatsApp"
+      >
+        <img src="/whatsapp.svg" alt="" aria-hidden="true" />
+      </a>
     </main>
   );
 }

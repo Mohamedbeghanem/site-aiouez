@@ -45,6 +45,8 @@ test("server-renders the finished Cabinet Aiouez site", async () => {
   assert.match(html, /https:\/\/evotechly\.com\//);
   assert.match(html, /Made by/);
   assert.match(html, /Evotechly/);
+  assert.match(html, /https:\/\/wa\.me\/213541310255/);
+  assert.match(html, /Contacter le Cabinet Aiouez sur WhatsApp/);
   assert.doesNotMatch(html, /codex-preview|Building your site|SkeletonPreview/);
 });
 
