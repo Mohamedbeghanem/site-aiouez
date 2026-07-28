@@ -25,11 +25,15 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: "Cabinet Aiouez | Commissaire aux comptes à Alger",
     description:
-      "Audit légal, expertise comptable, fiscalité et conseil en gestion pour les entreprises en Algérie.",
+      "Commissariat aux comptes, expertise comptable, fiscalité et conseil en gestion pour les entreprises en Algérie.",
+    icons: {
+      icon: "/logo-aiouez.svg",
+      shortcut: "/logo-aiouez.svg",
+    },
     openGraph: {
-      title: "Cabinet Aiouez — La clarté financière au service de vos décisions",
+      title: "Cabinet Aiouez — Certifier vos comptes. Sécuriser vos décisions.",
       description:
-        "Audit, expertise comptable et conseil pour avancer avec des chiffres fiables et une vision nette.",
+        "Commissaire aux comptes et comptable agréé à Alger.",
       type: "website",
       locale: "fr_DZ",
       url: baseUrl,
@@ -46,7 +50,7 @@ export async function generateMetadata(): Promise<Metadata> {
     twitter: {
       card: "summary_large_image",
       title: "Cabinet Aiouez — Audit & Conseil",
-      description: "La clarté financière au service de vos décisions.",
+      description: "Certifier vos comptes. Sécuriser vos décisions.",
       images: [`${baseUrl}/og.png`],
     },
   };

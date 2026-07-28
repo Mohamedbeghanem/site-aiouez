@@ -78,6 +78,22 @@ a {
   width: fit-content;
 }
 
+.official-brand {
+  width: 196px;
+  height: 62px;
+  padding: 7px 11px;
+  border-radius: 4px 15px 4px 15px;
+  background: #ffffff;
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.12);
+}
+
+.official-brand img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
+}
+
 .brand-mark {
   width: 42px;
   height: 42px;
@@ -202,7 +218,8 @@ a {
 }
 
 .hero-copy,
-.signal-card {
+.signal-card,
+.audit-dossier {
   position: relative;
   z-index: 2;
 }
@@ -331,6 +348,229 @@ a {
   box-shadow: 0 40px 120px rgba(0, 0, 0, 0.25);
   backdrop-filter: blur(14px);
   overflow: hidden;
+}
+
+.audit-dossier {
+  min-height: 600px;
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 10px 38px 10px 38px;
+  background: rgba(255, 255, 255, 0.055);
+  box-shadow: 0 38px 110px rgba(0, 0, 0, 0.28);
+}
+
+.dossier-tabs {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 14px 0 10px;
+  color: rgba(255, 255, 255, 0.48);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.certified-state {
+  color: var(--mint);
+}
+
+.dossier-paper {
+  min-height: 524px;
+  padding: 30px;
+  border-radius: 5px 26px 5px 26px;
+  color: var(--ink);
+  background:
+    linear-gradient(rgba(7, 26, 34, 0.025) 1px, transparent 1px),
+    #fbfcfa;
+  background-size: 100% 34px;
+  box-shadow: 0 24px 65px rgba(0, 0, 0, 0.25);
+}
+
+.paper-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding-bottom: 25px;
+  border-bottom: 2px solid var(--ink);
+}
+
+.paper-heading > div {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.paper-heading small,
+.balance-title small,
+.auditor-signoff small {
+  color: rgba(7, 26, 34, 0.45);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 8px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.paper-heading strong {
+  font-family: Georgia, serif;
+  font-size: 24px;
+  font-weight: 500;
+}
+
+.paper-heading > span {
+  padding: 7px 9px;
+  border: 1px solid rgba(15, 134, 173, 0.3);
+  border-radius: 4px;
+  color: var(--cyan-deep);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 8px;
+  font-weight: 700;
+}
+
+.balance-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 25px 0 12px;
+}
+
+.balance-title > span {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.balance-table {
+  border-top: 1px solid rgba(7, 26, 34, 0.18);
+  border-left: 1px solid rgba(7, 26, 34, 0.18);
+  background: rgba(255, 255, 255, 0.74);
+}
+
+.balance-table > div {
+  min-height: 37px;
+  display: grid;
+  grid-template-columns: 1.7fr 0.7fr 0.7fr 0.55fr;
+}
+
+.balance-table > div > * {
+  display: flex;
+  align-items: center;
+  padding: 0 9px;
+  border-right: 1px solid rgba(7, 26, 34, 0.18);
+  border-bottom: 1px solid rgba(7, 26, 34, 0.18);
+  font-size: 9px;
+}
+
+.balance-table b {
+  justify-content: flex-end;
+  font-family: var(--font-geist-mono), monospace;
+  font-weight: 500;
+}
+
+.balance-table i {
+  justify-content: center;
+  color: #16845f;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.balance-table .table-head {
+  min-height: 32px;
+  color: rgba(7, 26, 34, 0.5);
+  background: #eef2ef;
+  font-family: var(--font-geist-mono), monospace;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.audit-controls {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  padding: 22px 0;
+}
+
+.audit-controls > div {
+  min-height: 75px;
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 12px;
+  border: 1px solid rgba(7, 26, 34, 0.12);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.control-check {
+  width: 19px;
+  height: 19px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: #0c5b44;
+  background: rgba(86, 230, 179, 0.28);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.control-check.pending {
+  color: #7b5b07;
+  background: rgba(240, 190, 54, 0.22);
+}
+
+.audit-controls p {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin: 0;
+}
+
+.audit-controls strong {
+  font-size: 8px;
+  line-height: 1.3;
+}
+
+.audit-controls small {
+  color: rgba(7, 26, 34, 0.43);
+  font-size: 7px;
+  line-height: 1.3;
+}
+
+.auditor-signoff {
+  min-height: 68px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 15px;
+  border-left: 3px solid var(--cyan-deep);
+  background: #eef4f2;
+}
+
+.auditor-signoff > div {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.auditor-signoff strong {
+  font-family: Georgia, serif;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.seal {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--cyan-deep);
+  border-radius: 50%;
+  color: var(--cyan-deep);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
 }
 
 .signal-topline,
@@ -1138,6 +1378,11 @@ footer {
   line-height: 1.8;
 }
 
+.footer-brand {
+  width: 220px;
+  height: 72px;
+}
+
 .footer-arrow {
   width: 52px;
   height: 52px;
@@ -1245,6 +1490,11 @@ footer {
     margin: 20px auto 0;
   }
 
+  .audit-dossier {
+    width: min(680px, 100%);
+    margin: 20px auto 0;
+  }
+
   .method-section {
     grid-template-columns: 1fr;
     padding: 70px;
@@ -1277,6 +1527,12 @@ footer {
   .brand-mark {
     width: 38px;
     height: 38px;
+  }
+
+  .official-brand {
+    width: 176px;
+    height: 54px;
+    padding: 6px 9px;
   }
 
   .brand-copy small {
@@ -1315,6 +1571,37 @@ footer {
 
   .signal-card {
     min-height: 510px;
+  }
+
+  .audit-dossier {
+    min-height: 0;
+    padding: 9px;
+  }
+
+  .dossier-paper {
+    min-height: 0;
+    padding: 20px 14px;
+  }
+
+  .audit-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .audit-controls > div {
+    min-height: 58px;
+  }
+
+  .balance-table > div {
+    grid-template-columns: 1.45fr 0.7fr 0.7fr 0.55fr;
+  }
+
+  .balance-table > div > * {
+    padding: 0 5px;
+    font-size: 7px;
+  }
+
+  .auditor-signoff strong {
+    font-size: 11px;
   }
 
   .signal-stage {

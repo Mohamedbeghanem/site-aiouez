@@ -6,7 +6,7 @@ const services = [
   {
     index: "01",
     eyebrow: "Confiance",
-    title: "Audit légal",
+    title: "Commissariat aux comptes",
     description:
       "Certification des comptes, contrôle des procédures et rapports réglementaires menés avec indépendance.",
     items: ["Commissariat aux comptes", "Audit contractuel", "Rapports spéciaux"],
@@ -73,14 +73,8 @@ export default function Home() {
     <main>
       <div className="site-shell">
         <header className="topbar">
-          <a className="brand" href="#accueil" aria-label="Aiouez — Accueil">
-            <span className="brand-mark" aria-hidden="true">
-              A
-            </span>
-            <span className="brand-copy">
-              <strong>Aiouez</strong>
-              <small>Commissaire aux comptes</small>
-            </span>
+          <a className="brand official-brand" href="#accueil" aria-label="Aiouez — Accueil">
+            <img src="/logo-aiouez.svg" alt="Aiouez — Commissaire aux comptes" />
           </a>
 
           <nav className="desktop-nav" aria-label="Navigation principale">
@@ -128,18 +122,18 @@ export default function Home() {
           <div className="hero-glow hero-glow-two" aria-hidden="true" />
 
           <div className="hero-copy">
-            <div className="status-pill">
+            <div className="status-pill profession-pill">
               <span />
-              Cabinet agréé · Alger
+              Commissaire aux comptes · Comptable agréé · Alger
             </div>
             <h1>
-              La clarté financière,
+              Certifier vos comptes.
               <br />
-              <em>au service de vos décisions.</em>
+              <em>Sécuriser vos décisions.</em>
             </h1>
             <p>
-              Audit, expertise comptable et conseil pour les entreprises qui
-              veulent avancer avec des chiffres fiables et une vision nette.
+              Le Cabinet Aiouez accompagne les entreprises algériennes en
+              commissariat aux comptes, expertise comptable, fiscalité et conseil.
             </p>
             <div className="hero-actions">
               <a className="button button-primary" href="#contact">
@@ -165,43 +159,52 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="signal-card" aria-label="Aperçu des domaines d’expertise">
-            <div className="signal-topline">
-              <span>Aiouez / Signal financier</span>
-              <span className="live-dot">En direct</span>
+          <div className="audit-dossier" aria-label="Aperçu d’un dossier de commissariat aux comptes">
+            <div className="dossier-tabs">
+              <span>Dossier d’audit · Exercice N</span>
+              <span className="certified-state">✓ Revue en cours</span>
             </div>
-            <div className="signal-stage">
-              <div className="orbit orbit-one" />
-              <div className="orbit orbit-two" />
-              <div className="orbit orbit-three" />
-              <div className="signal-core">
-                <span>A.</span>
-                <small>Rigueur</small>
+            <div className="dossier-paper">
+              <div className="paper-heading">
+                <div>
+                  <small>Mission de certification</small>
+                  <strong>États financiers</strong>
+                </div>
+                <span>SCF / CAC</span>
               </div>
-              <div className="signal-tag tag-one">
-                <span>01</span> Audit légal
+              <div className="balance-title">
+                <span>Bilan synthétique</span>
+                <small>Clôture au 31/12/N</small>
               </div>
-              <div className="signal-tag tag-two">
-                <span>02</span> Conformité SCF
+              <div className="balance-table">
+                <div className="table-head">
+                  <span>Poste</span><span>N</span><span>N−1</span><span>Contrôle</span>
+                </div>
+                <div><span>Actif non courant</span><b>42 680</b><b>39 210</b><i>✓</i></div>
+                <div><span>Actif courant</span><b>31 450</b><b>28 940</b><i>✓</i></div>
+                <div><span>Capitaux propres</span><b>38 120</b><b>35 760</b><i>✓</i></div>
+                <div><span>Passifs</span><b>36 010</b><b>32 390</b><i>✓</i></div>
               </div>
-              <div className="signal-tag tag-three">
-                <span>03</span> Pilotage
+              <div className="audit-controls">
+                <div>
+                  <span className="control-check">✓</span>
+                  <p><strong>Équilibre du bilan</strong><small>Actif = Passif</small></p>
+                </div>
+                <div>
+                  <span className="control-check">✓</span>
+                  <p><strong>Pièces justificatives</strong><small>Échantillon contrôlé</small></p>
+                </div>
+                <div>
+                  <span className="control-check pending">•</span>
+                  <p><strong>Rapport du commissaire</strong><small>Préparation en cours</small></p>
+                </div>
               </div>
-            </div>
-            <div className="signal-footer">
-              <div>
-                <span>Indice de confiance</span>
-                <strong>Élevé</strong>
-              </div>
-              <div className="micro-bars" aria-hidden="true">
-                <i />
-                <i />
-                <i />
-                <i />
-                <i />
-                <i />
-                <i />
-                <i />
+              <div className="auditor-signoff">
+                <div>
+                  <small>Opinion d’audit</small>
+                  <strong>Indépendance · Sincérité · Image fidèle</strong>
+                </div>
+                <span className="seal">CAC</span>
               </div>
             </div>
           </div>
@@ -222,7 +225,7 @@ export default function Home() {
         <div className="section-heading">
           <div>
             <span className="eyebrow">Nos expertises</span>
-            <h2>Vos chiffres parlent.<br />Nous les rendons décisifs.</h2>
+            <h2>Comptes certifiés.<br />Décisions sécurisées.</h2>
           </div>
           <p>
             Un accompagnement complet, du respect de vos obligations à la
@@ -427,12 +430,8 @@ export default function Home() {
 
       <footer>
         <div className="footer-main">
-          <a className="brand" href="#accueil" aria-label="Aiouez — Retour en haut">
-            <span className="brand-mark" aria-hidden="true">A</span>
-            <span className="brand-copy">
-              <strong>Aiouez</strong>
-              <small>Commissaire aux comptes</small>
-            </span>
+          <a className="brand official-brand footer-brand" href="#accueil" aria-label="Aiouez — Retour en haut">
+            <img src="/logo-aiouez.svg" alt="Aiouez — Commissaire aux comptes" />
           </a>
           <p>
             Audit · Expertise comptable · Fiscalité · Conseil
