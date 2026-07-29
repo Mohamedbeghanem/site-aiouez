@@ -36,6 +36,8 @@ const audiences = [
   "Professions libérales",
 ];
 
+type ContactField = "name" | "email" | "need" | "message";
+
 export default function Home() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [activeService, setActiveService] = useState(0);
@@ -43,6 +45,7 @@ export default function Home() {
     status: "idle" | "submitting" | "success" | "error";
     message: string;
     reference?: string;
+    errors?: Partial<Record<ContactField, string>>;
   }>({ status: "idle", message: "" });
   const selectedService = services[activeService];
 
@@ -120,7 +123,12 @@ export default function Home() {
       });
       const result = await response.json();
       if (!response.ok || !result.ok) {
-        throw new Error(result.message || "La demande n’a pas pu être envoyée.");
+        setFormState({
+          status: "error",
+          message: result.message || "La demande n’a pas pu être envoyée.",
+          errors: result.errors,
+        });
+        return;
       }
       formElement.reset();
       setFormState({
@@ -137,6 +145,17 @@ export default function Home() {
             : "La demande n’a pas pu être envoyée.",
       });
     }
+  }
+
+  function handleFormChange(event: FormEvent<HTMLFormElement>) {
+    const field = (event.target as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement).name as ContactField;
+    if (!field || !formState.errors?.[field]) return;
+
+    setFormState((current) => {
+      const errors = { ...current.errors };
+      delete errors[field];
+      return { ...current, errors };
+    });
   }
 
   function closeMenu() {
@@ -550,7 +569,7 @@ export default function Home() {
           </div>
         </div>
 
-        <form className="contact-form" data-reveal="right" onSubmit={handleSubmit}>
+        <form className="contact-form" data-reveal="right" onSubmit={handleSubmit} onChange={handleFormChange} noValidate>
           <label className="honeypot" aria-hidden="true">
             <span>Site web</span>
             <input name="website" type="text" tabIndex={-1} autoComplete="off" />
@@ -558,7 +577,15 @@ export default function Home() {
           <div className="form-row">
             <label>
               <span>Nom et prénom *</span>
-              <input name="name" type="text" placeholder="Votre nom" required />
+              <input
+                name="name"
+                type="text"
+                placeholder="Votre nom"
+                required
+                aria-invalid={Boolean(formState.errors?.name)}
+                aria-describedby={formState.errors?.name ? "contact-error-name" : undefined}
+              />
+              {formState.errors?.name && <small className="field-error" id="contact-error-name">{formState.errors.name}</small>}
             </label>
             <label>
               <span>Entreprise</span>
@@ -567,7 +594,15 @@ export default function Home() {
           </div>
           <label>
             <span>Email professionnel *</span>
-            <input name="email" type="email" placeholder="vous@entreprise.dz" required />
+            <input
+              name="email"
+              type="email"
+              placeholder="vous@entreprise.dz"
+              required
+              aria-invalid={Boolean(formState.errors?.email)}
+              aria-describedby={formState.errors?.email ? "contact-error-email" : undefined}
+            />
+            {formState.errors?.email && <small className="field-error" id="contact-error-email">{formState.errors.email}</small>}
           </label>
           <label>
             <span>Téléphone</span>
@@ -575,7 +610,13 @@ export default function Home() {
           </label>
           <label>
             <span>Votre besoin *</span>
-            <select name="need" defaultValue="" required>
+            <select
+              name="need"
+              defaultValue=""
+              required
+              aria-invalid={Boolean(formState.errors?.need)}
+              aria-describedby={formState.errors?.need ? "contact-error-need" : undefined}
+            >
               <option value="" disabled>Sélectionner une expertise</option>
               <option>Commissariat aux comptes</option>
               <option>Expertise comptable</option>
@@ -583,14 +624,19 @@ export default function Home() {
               <option>Conseil en gestion</option>
               <option>Autre demande</option>
             </select>
+            {formState.errors?.need && <small className="field-error" id="contact-error-need">{formState.errors.need}</small>}
           </label>
           <label>
             <span>Précisions</span>
             <textarea
               name="message"
               rows={4}
+              maxLength={3000}
               placeholder="Présentez brièvement votre situation ou votre échéance."
+              aria-invalid={Boolean(formState.errors?.message)}
+              aria-describedby={formState.errors?.message ? "contact-error-message" : undefined}
             />
+            {formState.errors?.message && <small className="field-error" id="contact-error-message">{formState.errors.message}</small>}
           </label>
           <button
             className="button button-solid"

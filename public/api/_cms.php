@@ -104,6 +104,38 @@ function cms_clean_text(mixed $value, int $maximum): string
     return mb_substr($text, 0, $maximum);
 }
 
+function cms_validate_public_contact(array $payload): array
+{
+    $data = [
+        'name' => cms_clean_text($payload['name'] ?? '', 120),
+        'company' => cms_clean_text($payload['company'] ?? '', 160),
+        'email' => mb_strtolower(cms_clean_text($payload['email'] ?? '', 190)),
+        'phone' => cms_clean_text($payload['phone'] ?? '', 50),
+        'need' => cms_clean_text($payload['need'] ?? '', 120),
+        'message' => cms_clean_text($payload['message'] ?? '', 3000),
+    ];
+
+    $errors = [];
+    if (mb_strlen($data['name']) < 2) {
+        $errors['name'] = 'Indiquez votre nom et prénom.';
+    }
+    if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
+        $errors['email'] = 'Indiquez une adresse email valide.';
+    }
+    $allowedNeeds = [
+        'Commissariat aux comptes',
+        'Expertise comptable',
+        'Fiscalité',
+        'Conseil en gestion',
+        'Autre demande',
+    ];
+    if (!in_array($data['need'], $allowedNeeds, true)) {
+        $errors['need'] = 'Sélectionnez une expertise.';
+    }
+
+    return ['data' => $data, 'errors' => $errors];
+}
+
 function cms_submission_path(string $id): string
 {
     if (!preg_match('/^[a-f0-9]{24}$/', $id)) {

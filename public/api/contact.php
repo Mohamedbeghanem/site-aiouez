@@ -32,33 +32,8 @@ if (cms_clean_text($payload['website'] ?? '', 200) !== '') {
     cms_json_response(['ok' => true, 'message' => 'Votre demande a bien été reçue.']);
 }
 
-$name = cms_clean_text($payload['name'] ?? '', 120);
-$companyName = cms_clean_text($payload['company'] ?? '', 160);
-$email = mb_strtolower(cms_clean_text($payload['email'] ?? '', 190));
-$phone = cms_clean_text($payload['phone'] ?? '', 50);
-$need = cms_clean_text($payload['need'] ?? '', 120);
-$message = cms_clean_text($payload['message'] ?? '', 3000);
-
-$errors = [];
-if (mb_strlen($name) < 2) {
-    $errors['name'] = 'Indiquez votre nom et prénom.';
-}
-if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-    $errors['email'] = 'Indiquez une adresse email valide.';
-}
-$allowedNeeds = [
-    'Commissariat aux comptes',
-    'Expertise comptable',
-    'Fiscalité',
-    'Conseil en gestion',
-    'Autre demande',
-];
-if (!in_array($need, $allowedNeeds, true)) {
-    $errors['need'] = 'Sélectionnez une expertise.';
-}
-if ($message !== '' && mb_strlen($message) < 10) {
-    $errors['message'] = 'Ajoutez un peu plus de détails ou laissez ce champ vide.';
-}
+$validation = cms_validate_public_contact($payload);
+$errors = $validation['errors'];
 
 if ($errors !== []) {
     cms_json_response([
@@ -67,6 +42,13 @@ if ($errors !== []) {
         'errors' => $errors,
     ], 422);
 }
+
+$name = $validation['data']['name'];
+$companyName = $validation['data']['company'];
+$email = $validation['data']['email'];
+$phone = $validation['data']['phone'];
+$need = $validation['data']['need'];
+$message = $validation['data']['message'];
 
 $publicId = bin2hex(random_bytes(12));
 $submission = [

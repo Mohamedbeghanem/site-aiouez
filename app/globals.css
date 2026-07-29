@@ -900,6 +900,18 @@ a {
   box-shadow: 0 0 0 3px rgba(15, 134, 173, 0.1);
 }
 
+.contact-form [aria-invalid="true"] {
+  border-color: #b84949;
+  box-shadow: 0 0 0 3px rgba(184, 73, 73, 0.09);
+}
+
+.contact-form .field-error {
+  color: #9d3232;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
 .contact-form .button {
   width: 100%;
 }
