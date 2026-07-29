@@ -868,10 +868,9 @@ a {
 }
 
 .contact-form input,
-.contact-form select {
+.contact-form select,
+.contact-form textarea {
   width: 100%;
-  height: 54px;
-  padding: 0 14px;
   border: 1px solid var(--line);
   border-radius: 3px;
   outline: 0;
@@ -880,8 +879,23 @@ a {
   transition: border-color 180ms ease, box-shadow 180ms ease;
 }
 
+.contact-form input,
+.contact-form select {
+  height: 54px;
+  padding: 0 14px;
+}
+
+.contact-form textarea {
+  min-height: 116px;
+  padding: 14px;
+  resize: vertical;
+  font: inherit;
+  line-height: 1.6;
+}
+
 .contact-form input:focus,
-.contact-form select:focus {
+.contact-form select:focus,
+.contact-form textarea:focus {
   border-color: var(--blue);
   box-shadow: 0 0 0 3px rgba(15, 134, 173, 0.1);
 }
@@ -890,9 +904,62 @@ a {
   width: 100%;
 }
 
+.contact-form .button:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
+.honeypot {
+  position: absolute !important;
+  left: -10000px !important;
+  width: 1px !important;
+  height: 1px !important;
+  overflow: hidden !important;
+}
+
+.form-feedback {
+  display: grid;
+  gap: 5px;
+  padding: 15px 16px;
+  border: 1px solid;
+  border-radius: 5px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.form-feedback strong {
+  font-size: 12px;
+}
+
+.form-feedback-success {
+  border-color: #b8d98f;
+  color: #315d17;
+  background: #f2f9e9;
+}
+
+.form-feedback-error {
+  border-color: #e1b4b4;
+  color: #822e2e;
+  background: #fff3f3;
+}
+
+.form-feedback-submitting {
+  border-color: #b9d9e4;
+  color: #0b5c78;
+  background: #eff9fc;
+}
+
+.form-feedback a {
+  width: max-content;
+  margin-top: 3px;
+  color: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+}
+
 .privacy {
-  color: #8a999e;
-  font-size: 9px;
+  color: #687d84;
+  font-size: 10px;
   text-align: center;
 }
 

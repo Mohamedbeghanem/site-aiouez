@@ -39,6 +39,11 @@ const audiences = [
 export default function Home() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [activeService, setActiveService] = useState(0);
+  const [formState, setFormState] = useState<{
+    status: "idle" | "submitting" | "success" | "error";
+    message: string;
+    reference?: string;
+  }>({ status: "idle", message: "" });
   const selectedService = services[activeService];
 
   useEffect(() => {
@@ -101,18 +106,37 @@ export default function Home() {
     };
   }, [menuOpen]);
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    const name = String(form.get("name") || "");
-    const company = String(form.get("company") || "");
-    const email = String(form.get("email") || "");
-    const need = String(form.get("need") || "");
-    const subject = encodeURIComponent(`Demande de consultation — ${company || name}`);
-    const body = encodeURIComponent(
-      `Bonjour Cabinet Aiouez,\n\nJe souhaite échanger au sujet de : ${need}\n\nNom : ${name}\nEntreprise : ${company}\nEmail : ${email}\n\nCordialement,`,
-    );
-    window.location.href = `mailto:rahim@aouiz-dz.com?subject=${subject}&body=${body}`;
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
+    setFormState({ status: "submitting", message: "Envoi en cours…" });
+
+    try {
+      const response = await fetch("/api/contact.php", {
+        method: "POST",
+        headers: { Accept: "application/json" },
+        body: form,
+      });
+      const result = await response.json();
+      if (!response.ok || !result.ok) {
+        throw new Error(result.message || "La demande n’a pas pu être envoyée.");
+      }
+      formElement.reset();
+      setFormState({
+        status: "success",
+        message: result.message,
+        reference: result.reference,
+      });
+    } catch (error) {
+      setFormState({
+        status: "error",
+        message:
+          error instanceof Error
+            ? error.message
+            : "La demande n’a pas pu être envoyée.",
+      });
+    }
   }
 
   function closeMenu() {
@@ -507,8 +531,8 @@ export default function Home() {
           </div>
           <h2>Parlons de votre entreprise.</h2>
           <p>
-            Décrivez-nous votre besoin. Votre demande sera préparée dans votre
-            messagerie pour un échange direct et confidentiel avec le cabinet.
+            Décrivez-nous votre besoin. Votre demande sera transmise directement
+            au cabinet pour un échange confidentiel.
           </p>
           <div className="contact-info">
             <a href="tel:+213541310255">
@@ -527,6 +551,10 @@ export default function Home() {
         </div>
 
         <form className="contact-form" data-reveal="right" onSubmit={handleSubmit}>
+          <label className="honeypot" aria-hidden="true">
+            <span>Site web</span>
+            <input name="website" type="text" tabIndex={-1} autoComplete="off" />
+          </label>
           <div className="form-row">
             <label>
               <span>Nom et prénom *</span>
@@ -542,6 +570,10 @@ export default function Home() {
             <input name="email" type="email" placeholder="vous@entreprise.dz" required />
           </label>
           <label>
+            <span>Téléphone</span>
+            <input name="phone" type="tel" placeholder="+213…" autoComplete="tel" />
+          </label>
+          <label>
             <span>Votre besoin *</span>
             <select name="need" defaultValue="" required>
               <option value="" disabled>Sélectionner une expertise</option>
@@ -552,11 +584,40 @@ export default function Home() {
               <option>Autre demande</option>
             </select>
           </label>
-          <button className="button button-solid" type="submit">
-            Préparer ma demande <span aria-hidden="true">→</span>
+          <label>
+            <span>Précisions</span>
+            <textarea
+              name="message"
+              rows={4}
+              placeholder="Présentez brièvement votre situation ou votre échéance."
+            />
+          </label>
+          <button
+            className="button button-solid"
+            type="submit"
+            disabled={formState.status === "submitting"}
+          >
+            {formState.status === "submitting" ? "Envoi en cours…" : "Envoyer ma demande"}
+            <span aria-hidden="true">→</span>
           </button>
+          {formState.status !== "idle" && (
+            <div
+              className={`form-feedback form-feedback-${formState.status}`}
+              role={formState.status === "error" ? "alert" : "status"}
+              aria-live="polite"
+            >
+              <strong>
+                {formState.status === "success" ? "Demande reçue" : formState.status === "error" ? "Envoi impossible" : "Transmission"}
+              </strong>
+              <span>{formState.message}</span>
+              {formState.reference && <small>Référence : {formState.reference}</small>}
+              {formState.status === "error" && (
+                <a href="mailto:rahim@aouiz-dz.com">Envoyer plutôt un email</a>
+              )}
+            </div>
+          )}
           <small className="privacy">
-            Vos informations ne sont pas stockées sur ce site.
+            Vos informations sont utilisées uniquement pour traiter votre demande.
           </small>
         </form>
       </section>
