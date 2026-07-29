@@ -87,11 +87,11 @@ document.querySelector("[data-copy-calendar]")?.addEventListener("click", async 
   if (!input) return;
   try {
     await navigator.clipboard.writeText(input.value);
-    event.currentTarget.textContent = "Copié";
+    event.currentTarget.textContent = window.aiouezTranslate?.("Copié") || "Copié";
   } catch {
     input.select();
     document.execCommand("copy");
-    event.currentTarget.textContent = "Copié";
+    event.currentTarget.textContent = window.aiouezTranslate?.("Copié") || "Copié";
   }
 });
 

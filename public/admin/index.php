@@ -11,22 +11,49 @@ admin_handle_actions();
 $flash = cms_take_flash();
 $csrf = cms_csrf_token();
 $user = crm_current_user();
+$locale = admin_locale();
+
+function render_language_switcher(): void
+{
+    $locale = admin_locale();
+    $current = ADMIN_LOCALES[$locale];
+    ?>
+    <details class="topbar-menu language-menu">
+      <summary class="language-trigger" aria-label="<?= e(admin_t('Changer la langue')) ?>">
+        <span class="language-flag" aria-hidden="true"><?= e($current['flag']) ?></span>
+        <span class="language-code"><?= e(mb_strtoupper($locale)) ?></span>
+        <span class="language-caret" aria-hidden="true">⌄</span>
+      </summary>
+      <div class="popover-menu language-popover" aria-label="<?= e(admin_t('Langue de l’interface')) ?>">
+        <span class="popover-title"><?= e(admin_t('Langue de l’interface')) ?></span>
+        <?php foreach (ADMIN_LOCALES as $code => $language): ?>
+          <a href="<?= e(admin_language_url($code)) ?>" lang="<?= e($code) ?>" dir="<?= e($language['dir']) ?>" class="<?= $locale === $code ? 'active' : '' ?>" <?= $locale === $code ? 'aria-current="true"' : '' ?>>
+            <span class="language-flag" aria-hidden="true"><?= e($language['flag']) ?></span>
+            <span><strong><?= e($language['native']) ?></strong><small><?= e(mb_strtoupper($code)) ?></small></span>
+            <?php if ($locale === $code): ?><b aria-hidden="true">✓</b><?php endif; ?>
+          </a>
+        <?php endforeach; ?>
+      </div>
+    </details>
+    <?php
+}
 
 if ($user === null):
 ?>
 <!doctype html>
-<html lang="fr">
+<html lang="<?= e($locale) ?>" dir="<?= e(admin_direction($locale)) ?>">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
-  <title>Connexion CRM · Cabinet Aiouez</title>
+  <title><?= e(admin_t('Connexion CRM · Cabinet Aiouez')) ?></title>
   <link rel="icon" href="/logo-aiouez.svg">
   <link rel="stylesheet" href="/admin/admin.css?v=<?= e((string)filemtime(__DIR__ . '/admin.css')) ?>">
 </head>
 <body class="login-page">
   <main class="login-shell">
     <section class="login-panel" aria-labelledby="login-title">
+      <div class="login-language"><?php render_language_switcher(); ?></div>
       <a class="admin-brand" href="/" aria-label="Retour au site Cabinet Aiouez">
         <img src="/logo-aiouez.svg" alt="">
         <span>CRM sécurisé</span>
@@ -36,7 +63,7 @@ if ($user === null):
         <h1 id="login-title">Bienvenue.</h1>
         <p>Retrouvez vos prospects, clients, opportunités et prochaines actions dans un seul espace.</p>
       </div>
-      <?php if ($flash): ?><div class="notice notice-<?= e($flash['type']) ?>" role="alert"><?= e($flash['message']) ?></div><?php endif; ?>
+      <?php if ($flash): ?><div class="notice notice-<?= e($flash['type']) ?>" role="alert"><?= e(admin_t($flash['message'])) ?></div><?php endif; ?>
       <form method="post" class="login-form">
         <input type="hidden" name="csrf" value="<?= e($csrf) ?>">
         <input type="hidden" name="action" value="login">
@@ -52,6 +79,8 @@ if ($user === null):
       <div class="visual-mark">A</div>
     </aside>
   </main>
+  <script>window.AIOUEZ_I18N=<?= json_encode(['locale' => $locale, 'dir' => admin_direction($locale), 'catalog' => admin_catalog($locale)], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP) ?>;</script>
+  <script src="/admin/admin-i18n.js?v=<?= e((string)filemtime(__DIR__ . '/admin-i18n.js')) ?>"></script>
 </body>
 </html>
 <?php
@@ -78,7 +107,7 @@ $unread = (int)(crm_fetch_one('SELECT COUNT(*) AS total FROM notifications WHERE
 function options(array $items, mixed $selected, string $valueKey, string $labelKey, string $empty = '— Non attribué —'): void
 {
     if ($empty !== '') {
-        echo '<option value="">' . e($empty) . '</option>';
+        echo '<option value="">' . e(admin_t($empty)) . '</option>';
     }
     foreach ($items as $item) {
         echo '<option value="' . e($item[$valueKey]) . '"' . ((string)$selected === (string)$item[$valueKey] ? ' selected' : '') . '>' . e($item[$labelKey]) . '</option>';
@@ -88,13 +117,13 @@ function options(array $items, mixed $selected, string $valueKey, string $labelK
 function select_map(array $items, mixed $selected): void
 {
     foreach ($items as $value => $label) {
-        echo '<option value="' . e($value) . '"' . ((string)$selected === (string)$value ? ' selected' : '') . '>' . e($label) . '</option>';
+        echo '<option value="' . e($value) . '"' . ((string)$selected === (string)$value ? ' selected' : '') . '>' . e(admin_t((string)$label)) . '</option>';
     }
 }
 
 function crm_status(string $label, string $key = 'neutral'): string
 {
-    return '<span class="status status-' . e($key) . '"><i aria-hidden="true"></i>' . e($label) . '</span>';
+    return '<span class="status status-' . e($key) . '"><i aria-hidden="true"></i>' . e(admin_t($label)) . '</span>';
 }
 
 function admin_icon(string $name, string $class = 'ui-icon'): string
@@ -137,9 +166,9 @@ function admin_icon(string $name, string $class = 'ui-icon'): string
 
 function empty_state(string $title, string $body, string $icon = 'empty-leads', ?string $actionLabel = null, ?string $actionHref = null): void
 {
-    echo '<div class="empty-state"><span class="empty-icon">' . admin_icon($icon) . '</span><h3>' . e($title) . '</h3><p>' . e($body) . '</p>';
+    echo '<div class="empty-state"><span class="empty-icon">' . admin_icon($icon) . '</span><h3>' . e(admin_t($title)) . '</h3><p>' . e(admin_t($body)) . '</p>';
     if ($actionLabel !== null && $actionHref !== null) {
-        echo '<a class="secondary-button" href="' . e($actionHref) . '">' . admin_icon('plus') . e($actionLabel) . '</a>';
+        echo '<a class="secondary-button" href="' . e($actionHref) . '">' . admin_icon('plus') . e(admin_t($actionLabel)) . '</a>';
     }
     echo '</div>';
 }
@@ -163,6 +192,8 @@ $subtitles = [
     'notifications' => 'Retrouvez les alertes qui nécessitent votre attention.',
     'settings' => 'Configurez l’espace, l’équipe et les règles du CRM.',
 ];
+$titles = array_map(static fn(string $value): string => admin_t($value), $titles);
+$subtitles = array_map(static fn(string $value): string => admin_t($value), $subtitles);
 $nav = [
     'dashboard' => ['dashboard','Vue d’ensemble'], 'leads' => ['leads','Leads'], 'contacts' => ['contacts','Contacts'],
     'companies' => ['companies','Entreprises'], 'pipeline' => ['pipeline','Pipeline'], 'tasks' => ['tasks','Tâches'],
@@ -170,7 +201,7 @@ $nav = [
 ];
 ?>
 <!doctype html>
-<html lang="fr">
+<html lang="<?= e($locale) ?>" dir="<?= e(admin_direction($locale)) ?>">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -192,7 +223,7 @@ $nav = [
     <nav aria-label="Navigation principale">
       <?php foreach ($nav as $key => [$icon, $label]): ?>
         <a href="?view=<?= e($key) ?>" class="<?= $view === $key ? 'active' : '' ?>" <?= $view === $key ? 'aria-current="page"' : '' ?>>
-          <span class="nav-icon"><?= admin_icon($icon) ?></span><span><?= e($label) ?></span>
+          <span class="nav-icon"><?= admin_icon($icon) ?></span><span><?= e(admin_t($label)) ?></span>
           <?php if ($key === 'leads'): ?><b><?= (int)(crm_fetch_one('SELECT COUNT(*) AS total FROM leads WHERE status="new" AND deleted_at IS NULL')['total'] ?? 0) ?></b><?php endif; ?>
         </a>
       <?php endforeach; ?>
@@ -214,8 +245,9 @@ $nav = [
       <div class="topbar-context"><span>CRM</span><strong><?= e($titles[$view]) ?></strong></div>
       <form class="global-search" method="get">
         <input type="hidden" name="view" value="<?= e($view) ?>">
-        <label><span class="sr-only">Rechercher dans <?= e(mb_strtolower($titles[$view])) ?></span><?= admin_icon('search') ?><input name="q" value="<?= e($query) ?>" placeholder="Rechercher dans <?= e(mb_strtolower($titles[$view])) ?>…"></label>
+        <label><span class="sr-only"><?= e(admin_t('Rechercher')) ?> <?= e(mb_strtolower($titles[$view])) ?></span><?= admin_icon('search') ?><input name="q" value="<?= e($query) ?>" placeholder="<?= e(admin_t('Rechercher')) ?> <?= e(mb_strtolower($titles[$view])) ?>…"></label>
       </form>
+      <?php render_language_switcher(); ?>
       <details class="topbar-menu quick-add">
         <summary class="icon-button primary-icon-button" aria-label="Créer un élément"><?= admin_icon('plus') ?></summary>
         <div class="popover-menu" role="menu">
@@ -236,7 +268,7 @@ $nav = [
         </div>
       </details>
     </header>
-    <?php if ($flash): ?><div class="notice notice-<?= e($flash['type']) ?>" role="status"><?= e($flash['message']) ?></div><?php endif; ?>
+    <?php if ($flash): ?><div class="notice notice-<?= e($flash['type']) ?>" role="status"><?= e(admin_t($flash['message'])) ?></div><?php endif; ?>
     <section class="page-header">
       <div><p class="page-kicker"><?= e($view === 'dashboard' ? 'Aujourd’hui' : 'Espace de travail') ?></p><h1><?= e($titles[$view]) ?></h1><p><?= e($subtitles[$view]) ?></p></div>
       <div class="page-header-actions">
@@ -253,7 +285,7 @@ $nav = [
     </section>
     <form class="mobile-search" method="get">
       <input type="hidden" name="view" value="<?= e($view) ?>">
-      <label><span class="sr-only">Rechercher dans <?= e(mb_strtolower($titles[$view])) ?></span><?= admin_icon('search') ?><input name="q" value="<?= e($query) ?>" placeholder="Rechercher…"></label>
+      <label><span class="sr-only"><?= e(admin_t('Rechercher')) ?> <?= e(mb_strtolower($titles[$view])) ?></span><?= admin_icon('search') ?><input name="q" value="<?= e($query) ?>" placeholder="<?= e(admin_t('Rechercher…')) ?>"></label>
       <button class="secondary-button" type="submit">Rechercher</button>
     </form>
 
@@ -337,7 +369,7 @@ $nav = [
     <div class="page-actions"><p><strong><?= count($items) ?></strong> contact(s) dans votre base relationnelle</p></div>
     <section class="crm-card table-card"><div class="table-summary"><strong>Contacts</strong><span>Coordonnées, rôle, entreprise, responsable et dernière activité.</span></div><div class="data-list"><?php foreach($items as $item): ?><a class="data-row contact-row" href="?view=contacts&id=<?= $item['id'] ?>"><span class="avatar"><?= e(mb_strtoupper(mb_substr($item['first_name'],0,1).mb_substr($item['last_name'],0,1))) ?></span><div class="primary-cell"><strong><?= e(trim($item['first_name'].' '.$item['last_name'])) ?></strong><small><?= e(trim(($item['job_title']?:'Contact').' · '.($item['email']?:($item['phone']?:$item['mobile'])),' ·')) ?></small></div><span><?= e($item['company_name'] ?: 'Indépendant') ?></span><span><?= e($item['phone'] ?: $item['mobile']) ?></span><span><?= e($item['owner_name']??'Non attribué') ?></span><?= crm_status(ucfirst($item['status']),$item['status']) ?><time><?= admin_date($item['last_activity_at']?:$item['updated_at'],'d/m/Y') ?></time><b>›</b></a><?php endforeach; ?><?php if(!$items)empty_state('Aucun contact','Convertissez un lead ou créez votre premier contact.','empty-contacts','Nouveau contact','?view=contacts&new=1'); ?></div></section>
     <?php if($selected||$editing):$record=$selected??['id'=>'','first_name'=>'','last_name'=>'','email'=>'','phone'=>'','mobile'=>'','job_title'=>'','preferred_language'=>'fr','address'=>'','city'=>'','country'=>'Algérie','source'=>'manual','status'=>'prospect','owner_id'=>$user['id'],'company_id'=>'','notes'=>'']; ?>
-      <div class="detail-backdrop" data-close-panel></div><aside class="detail-panel"><header><div><p class="eyebrow">Contact</p><h2><?= e(trim($record['first_name'].' '.$record['last_name']) ?: 'Nouveau contact') ?></h2></div><a class="close-button" href="?view=contacts">×</a></header><div class="detail-body"><form method="post" class="record-form"><input type="hidden" name="csrf" value="<?= e($csrf) ?>"><input type="hidden" name="action" value="save_contact"><input type="hidden" name="return_view" value="contacts"><input type="hidden" name="id" value="<?= e($record['id']) ?>"><div class="field-grid"><label><span>Prénom *</span><input name="first_name" required value="<?= e($record['first_name']) ?>"></label><label><span>Nom</span><input name="last_name" value="<?= e($record['last_name']) ?>"></label><label><span>Email</span><input type="email" name="email" value="<?= e($record['email']) ?>"></label><label><span>Téléphone</span><input name="phone" value="<?= e($record['phone']) ?>"></label><label><span>Mobile</span><input name="mobile" value="<?= e($record['mobile']) ?>"></label><label><span>Fonction</span><input name="job_title" value="<?= e($record['job_title']) ?>"></label><label class="wide"><span>Entreprise</span><select name="company_id"><?php options($companies,$record['company_id'],'id','name'); ?></select></label><label><span>Ville</span><input name="city" value="<?= e($record['city']) ?>"></label><label><span>Pays</span><input name="country" value="<?= e($record['country']) ?>"></label><label><span>Langue</span><select name="preferred_language"><option value="fr" <?= $record['preferred_language']==='fr'?'selected':'' ?>>Français</option><option value="ar" <?= $record['preferred_language']==='ar'?'selected':'' ?>>Arabe</option></select></label><label><span>Statut</span><select name="status"><?php select_map(['prospect'=>'Prospect','client'=>'Client','inactive'=>'Inactif'],$record['status']); ?></select></label><label><span>Source</span><input name="source" value="<?= e($record['source']) ?>"></label><label><span>Responsable</span><select name="owner_id"><?php options($users,$record['owner_id'],'id','full_name'); ?></select></label><label class="wide"><span>Adresse</span><textarea name="address"><?= e($record['address']) ?></textarea></label><label class="wide"><span>Notes</span><textarea name="notes"><?= e($record['notes']) ?></textarea></label></div><button class="primary-button">Enregistrer</button></form><?php if($selected): ?><?php render_email_composer($csrf,'contact',$selected); ?><details class="action-box"><summary>Ajouter une activité</summary><?php render_activity_form($csrf,'contact',(int)$selected['id'],$users); ?></details><?php render_tags($csrf,'contact',(int)$selected['id']); ?><?php render_related($selected,'contact'); ?><?php endif; ?></div></aside>
+      <div class="detail-backdrop" data-close-panel></div><aside class="detail-panel"><header><div><p class="eyebrow">Contact</p><h2><?= e(trim($record['first_name'].' '.$record['last_name']) ?: 'Nouveau contact') ?></h2></div><a class="close-button" href="?view=contacts">×</a></header><div class="detail-body"><form method="post" class="record-form"><input type="hidden" name="csrf" value="<?= e($csrf) ?>"><input type="hidden" name="action" value="save_contact"><input type="hidden" name="return_view" value="contacts"><input type="hidden" name="id" value="<?= e($record['id']) ?>"><div class="field-grid"><label><span>Prénom *</span><input name="first_name" required value="<?= e($record['first_name']) ?>"></label><label><span>Nom</span><input name="last_name" value="<?= e($record['last_name']) ?>"></label><label><span>Email</span><input type="email" name="email" value="<?= e($record['email']) ?>"></label><label><span>Téléphone</span><input name="phone" value="<?= e($record['phone']) ?>"></label><label><span>Mobile</span><input name="mobile" value="<?= e($record['mobile']) ?>"></label><label><span>Fonction</span><input name="job_title" value="<?= e($record['job_title']) ?>"></label><label class="wide"><span>Entreprise</span><select name="company_id"><?php options($companies,$record['company_id'],'id','name'); ?></select></label><label><span>Ville</span><input name="city" value="<?= e($record['city']) ?>"></label><label><span>Pays</span><input name="country" value="<?= e($record['country']) ?>"></label><label><span>Langue</span><select name="preferred_language"><option value="fr" <?= $record['preferred_language']==='fr'?'selected':'' ?>>Français</option><option value="ar" <?= $record['preferred_language']==='ar'?'selected':'' ?>>Arabe</option><option value="en" <?= $record['preferred_language']==='en'?'selected':'' ?>>Anglais</option></select></label><label><span>Statut</span><select name="status"><?php select_map(['prospect'=>'Prospect','client'=>'Client','inactive'=>'Inactif'],$record['status']); ?></select></label><label><span>Source</span><input name="source" value="<?= e($record['source']) ?>"></label><label><span>Responsable</span><select name="owner_id"><?php options($users,$record['owner_id'],'id','full_name'); ?></select></label><label class="wide"><span>Adresse</span><textarea name="address"><?= e($record['address']) ?></textarea></label><label class="wide"><span>Notes</span><textarea name="notes"><?= e($record['notes']) ?></textarea></label></div><button class="primary-button">Enregistrer</button></form><?php if($selected): ?><?php render_email_composer($csrf,'contact',$selected); ?><details class="action-box"><summary>Ajouter une activité</summary><?php render_activity_form($csrf,'contact',(int)$selected['id'],$users); ?></details><?php render_tags($csrf,'contact',(int)$selected['id']); ?><?php render_related($selected,'contact'); ?><?php endif; ?></div></aside>
     <?php endif; ?>
 
 <?php elseif ($view === 'companies'):
@@ -450,6 +482,8 @@ $nav = [
     <div><button class="secondary-button" value="cancel">Annuler</button><button class="danger-button" value="confirm">Confirmer</button></div>
   </form>
 </dialog>
+<script>window.AIOUEZ_I18N=<?= json_encode(['locale' => $locale, 'dir' => admin_direction($locale), 'catalog' => admin_catalog($locale)], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP) ?>;</script>
+<script src="/admin/admin-i18n.js?v=<?= e((string)filemtime(__DIR__ . '/admin-i18n.js')) ?>" defer></script>
 <script src="/admin/admin.js?v=<?= e((string)filemtime(__DIR__ . '/admin.js')) ?>" defer></script>
 </body>
 </html>

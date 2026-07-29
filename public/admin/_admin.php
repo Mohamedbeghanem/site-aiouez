@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require_once dirname(__DIR__) . '/api/_crm.php';
+require_once __DIR__ . '/_i18n.php';
 
 function e(mixed $value): string
 {
@@ -20,9 +21,23 @@ function admin_date(?string $date, string $format = 'd/m/Y · H:i'): string
         return '—';
     }
     try {
-        return (new DateTimeImmutable($date, new DateTimeZone('UTC')))
+        $localizedFormat = $format;
+        if ($format === 'd/m/Y · H:i' && admin_locale() === 'en') {
+            $localizedFormat = 'm/d/Y · H:i';
+        }
+        $result = (new DateTimeImmutable($date, new DateTimeZone('UTC')))
             ->setTimezone(new DateTimeZone((string)crm_setting('timezone', 'Africa/Algiers')))
-            ->format($format);
+            ->format($localizedFormat);
+        if (admin_locale() === 'ar' && preg_match('/[MF]/', $localizedFormat)) {
+            $result = strtr($result, [
+                'January' => 'يناير', 'February' => 'فبراير', 'March' => 'مارس', 'April' => 'أفريل',
+                'May' => 'ماي', 'June' => 'جوان', 'July' => 'جويلية', 'August' => 'أوت',
+                'September' => 'سبتمبر', 'October' => 'أكتوبر', 'November' => 'نوفمبر', 'December' => 'ديسمبر',
+                'Jan' => 'جان', 'Feb' => 'فيف', 'Mar' => 'مار', 'Apr' => 'أفريل', 'Jun' => 'جوان',
+                'Jul' => 'جويل', 'Aug' => 'أوت', 'Sep' => 'سبت', 'Oct' => 'أكت', 'Nov' => 'نوف', 'Dec' => 'ديس',
+            ]);
+        }
+        return $result;
     } catch (Throwable) {
         return $date;
     }
@@ -30,7 +45,11 @@ function admin_date(?string $date, string $format = 'd/m/Y · H:i'): string
 
 function admin_money(mixed $value, string $currency = 'DZD'): string
 {
-    return number_format((float)$value, 0, ',', ' ') . ' ' . e($currency);
+    $locale = admin_locale();
+    $decimal = $locale === 'en' ? '.' : ',';
+    $thousands = $locale === 'en' ? ',' : ' ';
+    $formatted = number_format((float)$value, 0, $decimal, $thousands) . ' ' . e($currency);
+    return '<bdi class="money-value" dir="ltr">' . $formatted . '</bdi>';
 }
 
 function admin_input(string $key, int $max = 500): string
