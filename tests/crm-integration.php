@@ -67,6 +67,29 @@ try {
     assert_true((int)$converted['company_id'] > 0, 'Company conversion failed.');
     assert_true((int)$converted['opportunity_id'] > 0, 'Opportunity conversion failed.');
     assert_true(crm_fetch_one('SELECT status FROM leads WHERE id = ?', [$leadId])['status'] === 'converted', 'Lead status was not converted.');
+    $checklist = crm_fetch_one('SELECT id,status FROM onboarding_checklists WHERE company_id=?', [$converted['company_id']]);
+    assert_true($checklist !== null && $checklist['status'] === 'active', 'Company onboarding checklist was not created.');
+    assert_true(
+        (int)crm_fetch_one('SELECT COUNT(*) AS total FROM onboarding_items WHERE checklist_id=?', [$checklist['id']])['total'] === 8,
+        'Default accounting onboarding steps were not created.'
+    );
+
+    $communicationId = crm_create_communication([
+        'channel' => 'email',
+        'direction' => 'outbound',
+        'subject' => 'Pièces comptables attendues',
+        'body' => 'Merci de transmettre les pièces du dossier.',
+        'recipients' => 'nadia@example.test',
+        'delivery_status' => 'logged',
+        'contact_id' => $converted['contact_id'],
+        'company_id' => $converted['company_id'],
+    ], (int)$user['id']);
+    assert_true($communicationId > 0, 'Communication logging failed.');
+    $timeline = crm_timeline('company', (int)$converted['company_id']);
+    assert_true(
+        count(array_filter($timeline, static fn(array $item): bool => $item['kind'] === 'email' && $item['title'] === 'Pièces comptables attendues')) === 1,
+        'Unified timeline did not include the logged email.'
+    );
 
     crm_set_setting('retention_days', '365', (int)$user['id']);
     assert_true(crm_setting('retention_days') === '365', 'Settings upsert failed.');
@@ -75,8 +98,16 @@ try {
          VALUES(?,?,?,"{}",?,1,?,?)',
         [crm_uid(), 'Relance automatique', 'lead.created', '{"action":"create_followup"}', crm_now(), crm_now()]
     );
-    crm_run_automations('lead.created', ['lead_id' => $leadId, 'owner_id' => $user['id'], 'name' => 'Nadia Benali']);
-    assert_true((int)crm_fetch_one('SELECT COUNT(*) AS total FROM tasks WHERE lead_id = ?', [$leadId])['total'] === 1, 'Automation task creation failed.');
+    $automatedLeadId = crm_create_lead([
+        'name' => 'Amine Relance',
+        'email' => 'amine@example.test',
+        'source' => 'manual',
+        'owner_id' => $user['id'],
+    ], (int)$user['id']);
+    $automatedTask = crm_fetch_one('SELECT title,due_at FROM tasks WHERE lead_id=?', [$automatedLeadId]);
+    assert_true($automatedTask !== null && $automatedTask['title'] === 'Relancer · Amine Relance', 'Automatic follow-up creation failed.');
+    $expectedDue = time() + 2 * 86400;
+    assert_true(abs(strtotime((string)$automatedTask['due_at']) - $expectedDue) < 120, 'Automatic follow-up delay is incorrect.');
 
     crm_execute(
         'INSERT INTO tasks(uid,title,status,priority,due_at,assigned_to,created_by,created_at,updated_at)

@@ -282,6 +282,66 @@ CREATE TABLE IF NOT EXISTS automation_rules (
   updated_at DATETIME NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS communications (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  uid CHAR(24) NOT NULL UNIQUE,
+  channel VARCHAR(40) NOT NULL DEFAULT 'email',
+  direction VARCHAR(40) NOT NULL DEFAULT 'outbound',
+  subject VARCHAR(255) NOT NULL,
+  body MEDIUMTEXT NULL,
+  sender VARCHAR(255) NULL,
+  recipients TEXT NULL,
+  delivery_status VARCHAR(40) NOT NULL DEFAULT 'logged',
+  occurred_at DATETIME NOT NULL,
+  external_id VARCHAR(255) NULL,
+  created_by BIGINT UNSIGNED NULL,
+  contact_id BIGINT UNSIGNED NULL,
+  company_id BIGINT UNSIGNED NULL,
+  lead_id BIGINT UNSIGNED NULL,
+  opportunity_id BIGINT UNSIGNED NULL,
+  created_at DATETIME NOT NULL,
+  deleted_at DATETIME NULL,
+  INDEX idx_communications_links(contact_id, company_id, lead_id, opportunity_id),
+  CONSTRAINT fk_communications_creator FOREIGN KEY(created_by) REFERENCES users(id),
+  CONSTRAINT fk_communications_contact FOREIGN KEY(contact_id) REFERENCES contacts(id),
+  CONSTRAINT fk_communications_company FOREIGN KEY(company_id) REFERENCES companies(id),
+  CONSTRAINT fk_communications_lead FOREIGN KEY(lead_id) REFERENCES leads(id),
+  CONSTRAINT fk_communications_opportunity FOREIGN KEY(opportunity_id) REFERENCES opportunities(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS onboarding_checklists (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  uid CHAR(24) NOT NULL UNIQUE,
+  company_id BIGINT UNSIGNED NOT NULL UNIQUE,
+  status VARCHAR(40) NOT NULL DEFAULT 'active',
+  created_by BIGINT UNSIGNED NULL,
+  created_at DATETIME NOT NULL,
+  updated_at DATETIME NOT NULL,
+  CONSTRAINT fk_onboarding_company FOREIGN KEY(company_id) REFERENCES companies(id),
+  CONSTRAINT fk_onboarding_creator FOREIGN KEY(created_by) REFERENCES users(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS onboarding_items (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  uid CHAR(24) NOT NULL UNIQUE,
+  checklist_id BIGINT UNSIGNED NOT NULL,
+  title VARCHAR(255) NOT NULL,
+  category VARCHAR(80) NOT NULL DEFAULT 'administrative',
+  position INT NOT NULL DEFAULT 0,
+  is_required TINYINT(1) NOT NULL DEFAULT 1,
+  is_completed TINYINT(1) NOT NULL DEFAULT 0,
+  due_at DATE NULL,
+  completed_at DATETIME NULL,
+  assigned_to BIGINT UNSIGNED NULL,
+  created_by BIGINT UNSIGNED NULL,
+  created_at DATETIME NOT NULL,
+  updated_at DATETIME NOT NULL,
+  INDEX idx_onboarding_items_checklist(checklist_id, position),
+  CONSTRAINT fk_onboarding_item_checklist FOREIGN KEY(checklist_id) REFERENCES onboarding_checklists(id) ON DELETE CASCADE,
+  CONSTRAINT fk_onboarding_item_assignee FOREIGN KEY(assigned_to) REFERENCES users(id),
+  CONSTRAINT fk_onboarding_item_creator FOREIGN KEY(created_by) REFERENCES users(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS settings (
   `key` VARCHAR(160) PRIMARY KEY,
   value TEXT NULL,
@@ -306,3 +366,4 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 INSERT IGNORE INTO schema_migrations(version, applied_at) VALUES(1, UTC_TIMESTAMP());
+INSERT IGNORE INTO schema_migrations(version, applied_at) VALUES(2, UTC_TIMESTAMP());

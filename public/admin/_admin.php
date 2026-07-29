@@ -114,7 +114,8 @@ function admin_handle_actions(): void
     try {
         if (in_array($action, [
             'save_lead', 'convert_lead', 'save_contact', 'save_company', 'save_opportunity',
-            'move_opportunity', 'save_task', 'save_activity', 'assign_tags',
+            'move_opportunity', 'save_task', 'save_activity', 'save_communication', 'assign_tags',
+            'toggle_onboarding_item', 'save_onboarding_item',
         ], true)) {
             crm_require_permission('records.edit');
         }
@@ -231,6 +232,15 @@ function admin_handle_actions(): void
 
         if ($action === 'save_opportunity') {
             $id = (int)($_POST['id'] ?? 0);
+            $wasWon = false;
+            if ($id > 0) {
+                $previousStage = crm_fetch_one(
+                    'SELECT s.is_won FROM opportunities o JOIN pipeline_stages s ON s.id=o.stage_id
+                     WHERE o.id=? AND o.deleted_at IS NULL',
+                    [$id]
+                );
+                $wasWon = (int)($previousStage['is_won'] ?? 0) === 1;
+            }
             $stageId = admin_nullable_id('stage_id') ?? (int)(crm_fetch_one('SELECT id FROM pipeline_stages WHERE is_active=1 ORDER BY position LIMIT 1')['id'] ?? 0);
             $stage = crm_fetch_one('SELECT probability,is_won,is_lost FROM pipeline_stages WHERE id=?', [$stageId]);
             if ($stage === null) {
@@ -266,6 +276,12 @@ function admin_handle_actions(): void
                 $id = crm_last_id();
                 crm_audit('create', 'opportunity', $id, 'Opportunité créée', [], $userId);
             }
+            if (!$wasWon && (int)$stage['is_won'] === 1) {
+                crm_run_automations('opportunity.won', [
+                    'opportunity_id' => $id, 'name' => $fields[0], 'owner_id' => $fields[10],
+                    'contact_id' => $fields[11], 'company_id' => $fields[12],
+                ]);
+            }
             cms_flash('success', 'L’opportunité a été enregistrée.');
             admin_redirect('view=pipeline&id=' . $id);
         }
@@ -273,6 +289,12 @@ function admin_handle_actions(): void
         if ($action === 'move_opportunity') {
             $id = (int)($_POST['id'] ?? 0);
             $stageId = (int)($_POST['stage_id'] ?? 0);
+            $previousStage = crm_fetch_one(
+                'SELECT s.is_won FROM opportunities o JOIN pipeline_stages s ON s.id=o.stage_id
+                 WHERE o.id=? AND o.deleted_at IS NULL',
+                [$id]
+            );
+            $wasWon = (int)($previousStage['is_won'] ?? 0) === 1;
             $stage = crm_fetch_one('SELECT * FROM pipeline_stages WHERE id=? AND is_active=1', [$stageId]);
             if ($stage === null) {
                 throw new RuntimeException('Étape invalide.');
@@ -282,6 +304,16 @@ function admin_handle_actions(): void
                 [$stageId, $stage['probability'], ($stage['is_won'] || $stage['is_lost']) ? crm_now() : null, crm_now(), $id]
             );
             crm_audit('stage', 'opportunity', $id, 'Étape modifiée : ' . $stage['name'], ['stage_id' => $stageId], $userId);
+            if (!$wasWon && (int)$stage['is_won'] === 1) {
+                $opportunity = crm_fetch_one('SELECT name,owner_id,contact_id,company_id FROM opportunities WHERE id=?', [$id]);
+                if ($opportunity !== null) {
+                    crm_run_automations('opportunity.won', [
+                        'opportunity_id' => $id, 'name' => $opportunity['name'],
+                        'owner_id' => $opportunity['owner_id'], 'contact_id' => $opportunity['contact_id'],
+                        'company_id' => $opportunity['company_id'],
+                    ]);
+                }
+            }
             cms_flash('success', 'L’opportunité a changé d’étape.');
             admin_redirect('view=pipeline&id=' . $id);
         }
@@ -343,6 +375,112 @@ function admin_handle_actions(): void
             admin_redirect('view=' . admin_record_link(admin_input('return_type', 30), admin_nullable_id('return_id')));
         }
 
+        if ($action === 'save_communication') {
+            $recipient = mb_strtolower(admin_input('recipient', 320));
+            $subject = admin_input('subject', 220);
+            $body = admin_input('body', 12000);
+            if (!filter_var($recipient, FILTER_VALIDATE_EMAIL)) {
+                throw new RuntimeException('Indiquez une adresse email destinataire valide.');
+            }
+            if ($subject === '' || $body === '') {
+                throw new RuntimeException('L’objet et le message sont obligatoires.');
+            }
+            $fromEmail = mb_strtolower((string)crm_setting('email_from', ''));
+            $fromName = trim((string)crm_setting('email_from_name', 'Cabinet Aiouez'));
+            $deliveryRequested = isset($_POST['send_now']);
+            $deliveryEnabled = crm_setting('email_delivery_enabled', '0') === '1';
+            $deliveryStatus = 'logged';
+            if ($deliveryRequested) {
+                if (!$deliveryEnabled || !filter_var($fromEmail, FILTER_VALIDATE_EMAIL)) {
+                    throw new RuntimeException('Configurez et activez l’envoi email dans Réglages → Intégrations.');
+                }
+                $safeName = str_replace(["\r", "\n"], '', $fromName);
+                $safeFrom = str_replace(["\r", "\n"], '', $fromEmail);
+                $headers = [
+                    'From: ' . $safeName . ' <' . $safeFrom . '>',
+                    'Reply-To: ' . $safeFrom,
+                    'Content-Type: text/plain; charset=UTF-8',
+                    'MIME-Version: 1.0',
+                ];
+                $sent = function_exists('mail') && @mail(
+                    $recipient,
+                    mb_encode_mimeheader($subject, 'UTF-8'),
+                    $body,
+                    implode("\r\n", $headers)
+                );
+                $deliveryStatus = $sent ? 'sent' : 'failed';
+            }
+            $communicationId = crm_create_communication([
+                'channel' => 'email', 'direction' => 'outbound', 'subject' => $subject, 'body' => $body,
+                'sender' => $fromEmail, 'recipients' => $recipient, 'delivery_status' => $deliveryStatus,
+                'contact_id' => admin_nullable_id('contact_id'), 'company_id' => admin_nullable_id('company_id'),
+                'lead_id' => admin_nullable_id('lead_id'), 'opportunity_id' => admin_nullable_id('opportunity_id'),
+            ], $userId);
+            if ($deliveryStatus === 'failed') {
+                cms_flash('error', 'L’email n’a pas pu être remis. Il reste enregistré dans la chronologie.');
+            } else {
+                cms_flash('success', $deliveryStatus === 'sent' ? 'Email envoyé et enregistré.' : 'Email enregistré dans la chronologie.');
+            }
+            crm_audit('email', 'communication', $communicationId, 'Email sortant traité', ['status' => $deliveryStatus], $userId);
+            admin_redirect('view=' . admin_record_link(admin_input('return_type', 30), admin_nullable_id('return_id')));
+        }
+
+        if ($action === 'toggle_onboarding_item') {
+            $itemId = (int)($_POST['item_id'] ?? 0);
+            $item = crm_fetch_one(
+                'SELECT i.*,c.company_id FROM onboarding_items i JOIN onboarding_checklists c ON c.id=i.checklist_id WHERE i.id=?',
+                [$itemId]
+            );
+            if ($item === null) {
+                throw new RuntimeException('Élément d’onboarding introuvable.');
+            }
+            $completed = (int)$item['is_completed'] === 1 ? 0 : 1;
+            crm_execute(
+                'UPDATE onboarding_items SET is_completed=?,completed_at=?,updated_at=? WHERE id=?',
+                [$completed, $completed ? crm_now() : null, crm_now(), $itemId]
+            );
+            $remaining = (int)(crm_fetch_one(
+                'SELECT COUNT(*) AS total FROM onboarding_items WHERE checklist_id=? AND is_required=1 AND is_completed=0',
+                [$item['checklist_id']]
+            )['total'] ?? 0);
+            crm_execute(
+                'UPDATE onboarding_checklists SET status=?,updated_at=? WHERE id=?',
+                [$remaining === 0 ? 'completed' : 'active', crm_now(), $item['checklist_id']]
+            );
+            crm_execute(
+                'INSERT INTO activities(uid,type,subject,body,activity_at,created_by,company_id,created_at,updated_at)
+                 VALUES(?,"system",?,?,?,?,?,?,?)',
+                [
+                    crm_uid(), ($completed ? 'Onboarding terminé · ' : 'Onboarding rouvert · ') . $item['title'],
+                    $completed ? 'Élément marqué comme terminé.' : 'Élément remis à faire.',
+                    crm_now(), $userId, $item['company_id'], crm_now(), crm_now(),
+                ]
+            );
+            crm_audit('onboarding', 'company', (int)$item['company_id'], 'Checklist mise à jour', ['item_id' => $itemId, 'completed' => $completed], $userId);
+            admin_redirect('view=companies&id=' . (int)$item['company_id']);
+        }
+
+        if ($action === 'save_onboarding_item') {
+            $companyId = (int)($_POST['company_id'] ?? 0);
+            $title = admin_input('title', 220);
+            if ($companyId <= 0 || $title === '') {
+                throw new RuntimeException('Le titre de l’étape est obligatoire.');
+            }
+            $checklistId = crm_ensure_company_onboarding($companyId, $userId);
+            $position = (int)(crm_fetch_one('SELECT COALESCE(MAX(position),0) AS value FROM onboarding_items WHERE checklist_id=?', [$checklistId])['value'] ?? 0) + 1;
+            crm_execute(
+                'INSERT INTO onboarding_items(uid,checklist_id,title,category,position,is_required,is_completed,due_at,assigned_to,created_by,created_at,updated_at)
+                 VALUES(?,?,?,?,?,1,0,?,?,?,?,?)',
+                [
+                    crm_uid(), $checklistId, $title, admin_input('category', 80) ?: 'administratif',
+                    $position, admin_input('due_at', 20) ?: null, admin_nullable_id('assigned_to') ?? $userId,
+                    $userId, crm_now(), crm_now(),
+                ]
+            );
+            cms_flash('success', 'L’étape d’onboarding a été ajoutée.');
+            admin_redirect('view=companies&id=' . $companyId);
+        }
+
         if ($action === 'assign_tags') {
             $type = admin_input('record_type', 30);
             $recordId = (int)($_POST['record_id'] ?? 0);
@@ -402,6 +540,34 @@ function admin_handle_actions(): void
             crm_audit('update', 'settings', null, 'Paramètres CRM modifiés', [], $userId);
             cms_flash('success', 'Les paramètres ont été enregistrés.');
             admin_redirect('view=settings');
+        }
+
+        if ($action === 'save_integrations') {
+            if (($user['role'] ?? '') !== 'admin') {
+                throw new RuntimeException('Seul un administrateur peut configurer les intégrations.');
+            }
+            $fromEmail = mb_strtolower(admin_input('email_from', 190));
+            if ($fromEmail !== '' && !filter_var($fromEmail, FILTER_VALIDATE_EMAIL)) {
+                throw new RuntimeException('L’adresse d’expédition n’est pas valide.');
+            }
+            crm_set_setting('email_from_name', admin_input('email_from_name', 160) ?: 'Cabinet Aiouez', $userId);
+            crm_set_setting('email_from', $fromEmail, $userId);
+            crm_set_setting('email_delivery_enabled', isset($_POST['email_delivery_enabled']) ? '1' : '0', $userId);
+            crm_set_setting('calendar_feed_enabled', isset($_POST['calendar_feed_enabled']) ? '1' : '0', $userId);
+            crm_audit('update', 'settings', null, 'Intégrations mises à jour', [], $userId);
+            cms_flash('success', 'Les intégrations ont été enregistrées.');
+            admin_redirect('view=settings&section=integrations');
+        }
+
+        if ($action === 'regenerate_calendar_feed') {
+            if (($user['role'] ?? '') !== 'admin') {
+                throw new RuntimeException('Seul un administrateur peut renouveler le lien calendrier.');
+            }
+            crm_set_setting('calendar_feed_token', bin2hex(random_bytes(24)), $userId);
+            crm_set_setting('calendar_feed_enabled', '1', $userId);
+            crm_audit('security', 'settings', null, 'Lien calendrier renouvelé', [], $userId);
+            cms_flash('success', 'Un nouveau lien calendrier privé a été généré.');
+            admin_redirect('view=settings&section=integrations');
         }
 
         if ($action === 'change_password') {
@@ -477,9 +643,28 @@ function admin_handle_actions(): void
             crm_execute(
                 'INSERT INTO automation_rules(uid,name,trigger_event,conditions_json,actions_json,is_active,created_at,updated_at)
                  VALUES(?,?,?,?,?,?,?,?)',
-                [crm_uid(), admin_input('name', 160), admin_input('trigger_event', 80), '{}', json_encode(['action' => admin_input('rule_action', 80)], JSON_THROW_ON_ERROR), 1, crm_now(), crm_now()]
+                [
+                    crm_uid(), admin_input('name', 160), admin_input('trigger_event', 80), '{}',
+                    json_encode([
+                        'action' => admin_input('rule_action', 80),
+                        'delay_days' => max(0, min(365, (int)($_POST['delay_days'] ?? 2))),
+                        'task_title' => admin_input('task_title', 220) ?: 'Relancer · {{name}}',
+                        'priority' => in_array(admin_input('priority', 20), ['low','normal','high','urgent'], true)
+                            ? admin_input('priority', 20) : 'normal',
+                    ], JSON_THROW_ON_ERROR),
+                    1, crm_now(), crm_now(),
+                ]
             );
             cms_flash('success', 'La règle d’automatisation a été créée.');
+            admin_redirect('view=settings&section=automation');
+        }
+
+        if ($action === 'toggle_automation') {
+            crm_require_permission('automations.manage');
+            $id = (int)($_POST['id'] ?? 0);
+            crm_execute('UPDATE automation_rules SET is_active=CASE WHEN is_active=1 THEN 0 ELSE 1 END,updated_at=? WHERE id=?', [crm_now(), $id]);
+            crm_audit('toggle', 'automation_rule', $id, 'Automatisation activée/désactivée', [], $userId);
+            cms_flash('success', 'Le statut de l’automatisation a été modifié.');
             admin_redirect('view=settings&section=automation');
         }
 

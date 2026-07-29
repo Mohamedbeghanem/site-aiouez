@@ -382,6 +382,61 @@ function crm_migrate(PDO $pdo): void
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL
         )',
+        'CREATE TABLE IF NOT EXISTS communications (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            uid TEXT NOT NULL UNIQUE,
+            channel TEXT NOT NULL DEFAULT "email",
+            direction TEXT NOT NULL DEFAULT "outbound",
+            subject TEXT NOT NULL,
+            body TEXT,
+            sender TEXT,
+            recipients TEXT,
+            delivery_status TEXT NOT NULL DEFAULT "logged",
+            occurred_at TEXT NOT NULL,
+            external_id TEXT,
+            created_by INTEGER,
+            contact_id INTEGER,
+            company_id INTEGER,
+            lead_id INTEGER,
+            opportunity_id INTEGER,
+            created_at TEXT NOT NULL,
+            deleted_at TEXT,
+            FOREIGN KEY(created_by) REFERENCES users(id),
+            FOREIGN KEY(contact_id) REFERENCES contacts(id),
+            FOREIGN KEY(company_id) REFERENCES companies(id),
+            FOREIGN KEY(lead_id) REFERENCES leads(id),
+            FOREIGN KEY(opportunity_id) REFERENCES opportunities(id)
+        )',
+        'CREATE TABLE IF NOT EXISTS onboarding_checklists (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            uid TEXT NOT NULL UNIQUE,
+            company_id INTEGER NOT NULL UNIQUE,
+            status TEXT NOT NULL DEFAULT "active",
+            created_by INTEGER,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            FOREIGN KEY(company_id) REFERENCES companies(id),
+            FOREIGN KEY(created_by) REFERENCES users(id)
+        )',
+        'CREATE TABLE IF NOT EXISTS onboarding_items (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            uid TEXT NOT NULL UNIQUE,
+            checklist_id INTEGER NOT NULL,
+            title TEXT NOT NULL,
+            category TEXT NOT NULL DEFAULT "administrative",
+            position INTEGER NOT NULL DEFAULT 0,
+            is_required INTEGER NOT NULL DEFAULT 1,
+            is_completed INTEGER NOT NULL DEFAULT 0,
+            due_at TEXT,
+            completed_at TEXT,
+            assigned_to INTEGER,
+            created_by INTEGER,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            FOREIGN KEY(checklist_id) REFERENCES onboarding_checklists(id) ON DELETE CASCADE,
+            FOREIGN KEY(assigned_to) REFERENCES users(id),
+            FOREIGN KEY(created_by) REFERENCES users(id)
+        )',
         'CREATE TABLE IF NOT EXISTS settings (
             key TEXT PRIMARY KEY,
             value TEXT,
@@ -419,6 +474,8 @@ function crm_migrate(PDO $pdo): void
         'CREATE INDEX IF NOT EXISTS idx_opportunities_owner ON opportunities(owner_id)',
         'CREATE INDEX IF NOT EXISTS idx_tasks_due ON tasks(due_at, status)',
         'CREATE INDEX IF NOT EXISTS idx_activities_links ON activities(contact_id, company_id, lead_id, opportunity_id)',
+        'CREATE INDEX IF NOT EXISTS idx_communications_links ON communications(contact_id, company_id, lead_id, opportunity_id)',
+        'CREATE INDEX IF NOT EXISTS idx_onboarding_items_checklist ON onboarding_items(checklist_id, position)',
         'CREATE INDEX IF NOT EXISTS idx_audit_created ON audit_logs(created_at)',
     ];
     foreach ($indexes as $statement) {
@@ -426,6 +483,8 @@ function crm_migrate(PDO $pdo): void
     }
 
     $statement = $pdo->prepare('INSERT OR IGNORE INTO schema_migrations(version, applied_at) VALUES(1, ?)');
+    $statement->execute([crm_now()]);
+    $statement = $pdo->prepare('INSERT OR IGNORE INTO schema_migrations(version, applied_at) VALUES(2, ?)');
     $statement->execute([crm_now()]);
 }
 
@@ -495,6 +554,10 @@ function crm_seed(PDO $pdo): void
         'retention_days' => '1825',
         'lead_assignment' => 'admin',
         'email_notifications' => '1',
+        'email_from_name' => 'Cabinet Aiouez',
+        'email_from' => (string)(cms_config()['notify_email'] ?? ''),
+        'email_delivery_enabled' => '0',
+        'calendar_feed_enabled' => '0',
     ];
     foreach ($defaults as $key => $value) {
         if (crm_fetch_one('SELECT `key` FROM settings WHERE `key` = ?', [$key], $pdo) === null) {
@@ -520,6 +583,10 @@ function crm_seed(PDO $pdo): void
             ],
             $pdo
         );
+    }
+
+    foreach (crm_fetch_all('SELECT id,owner_id FROM companies WHERE deleted_at IS NULL', [], $pdo) as $company) {
+        crm_ensure_company_onboarding((int)$company['id'], $company['owner_id'] ? (int)$company['owner_id'] : null, $pdo);
     }
 }
 
@@ -615,6 +682,130 @@ function crm_set_setting(string $key, string $value, ?int $userId): void
             [$key, $value, $userId, crm_now()]
         );
     }
+}
+
+function crm_ensure_company_onboarding(int $companyId, ?int $userId, ?PDO $pdo = null): int
+{
+    $pdo ??= crm_db();
+    $existing = crm_fetch_one('SELECT id FROM onboarding_checklists WHERE company_id=?', [$companyId], $pdo);
+    if ($existing !== null) {
+        return (int)$existing['id'];
+    }
+
+    $now = crm_now();
+    crm_execute(
+        'INSERT INTO onboarding_checklists(uid,company_id,status,created_by,created_at,updated_at) VALUES(?,?,"active",?,?,?)',
+        [crm_uid(), $companyId, $userId, $now, $now],
+        $pdo
+    );
+    $checklistId = crm_last_id($pdo);
+    $defaults = [
+        ['Identité et coordonnées des dirigeants', 'identite'],
+        ['Registre de commerce, NIF, NIS et article d’imposition', 'administratif'],
+        ['Statuts, agréments et bénéficiaires effectifs', 'juridique'],
+        ['RIB, mandat bancaire et coordonnées de facturation', 'financier'],
+        ['Lettre de mission signée', 'mission'],
+        ['Balance, journaux et transfert du dossier comptable', 'comptabilite'],
+        ['Calendrier fiscal et échéances sociales', 'fiscal'],
+        ['Accès logiciels, interlocuteurs et circuit de validation', 'organisation'],
+    ];
+    foreach ($defaults as $position => [$title, $category]) {
+        crm_execute(
+            'INSERT INTO onboarding_items(uid,checklist_id,title,category,position,is_required,is_completed,assigned_to,created_by,created_at,updated_at)
+             VALUES(?,?,?,?,?,1,0,?,?,?,?)',
+            [crm_uid(), $checklistId, $title, $category, $position + 1, $userId, $userId, $now, $now],
+            $pdo
+        );
+    }
+    return $checklistId;
+}
+
+function crm_create_communication(array $data, int $userId): int
+{
+    $now = crm_now();
+    crm_execute(
+        'INSERT INTO communications(uid,channel,direction,subject,body,sender,recipients,delivery_status,occurred_at,
+         external_id,created_by,contact_id,company_id,lead_id,opportunity_id,created_at)
+         VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+        [
+            crm_uid(), $data['channel'] ?? 'email', $data['direction'] ?? 'outbound',
+            $data['subject'], $data['body'] ?? '', $data['sender'] ?? '', $data['recipients'] ?? '',
+            $data['delivery_status'] ?? 'logged', $data['occurred_at'] ?? $now, $data['external_id'] ?? null,
+            $userId, $data['contact_id'] ?? null, $data['company_id'] ?? null,
+            $data['lead_id'] ?? null, $data['opportunity_id'] ?? null, $now,
+        ]
+    );
+    $id = crm_last_id();
+    crm_audit('create', 'communication', $id, 'Communication enregistrée : ' . $data['subject'], [
+        'channel' => $data['channel'] ?? 'email',
+        'delivery_status' => $data['delivery_status'] ?? 'logged',
+    ], $userId);
+    return $id;
+}
+
+function crm_timeline(string $recordType, int $recordId, int $limit = 80): array
+{
+    $columns = ['lead' => 'lead_id', 'contact' => 'contact_id', 'company' => 'company_id', 'opportunity' => 'opportunity_id'];
+    if (!isset($columns[$recordType]) || $recordId <= 0) {
+        return [];
+    }
+    $column = $columns[$recordType];
+    $items = [];
+
+    foreach (crm_fetch_all(
+        'SELECT a.*,u.full_name FROM activities a LEFT JOIN users u ON u.id=a.created_by
+         WHERE a.' . $column . '=? AND a.deleted_at IS NULL ORDER BY a.activity_at DESC LIMIT ' . (int)$limit,
+        [$recordId]
+    ) as $row) {
+        $items[] = [
+            'kind' => (string)$row['type'], 'title' => (string)$row['subject'], 'body' => (string)$row['body'],
+            'occurred_at' => (string)$row['activity_at'], 'actor' => (string)($row['full_name'] ?? 'Système'),
+            'status' => '', 'meta' => CRM_ACTIVITY_TYPES[(string)$row['type']] ?? ucfirst((string)$row['type']),
+        ];
+    }
+    foreach (crm_fetch_all(
+        'SELECT t.*,u.full_name FROM tasks t LEFT JOIN users u ON u.id=t.assigned_to
+         WHERE t.' . $column . '=? AND t.deleted_at IS NULL ORDER BY COALESCE(t.completed_at,t.updated_at) DESC LIMIT ' . (int)$limit,
+        [$recordId]
+    ) as $row) {
+        $items[] = [
+            'kind' => 'task', 'title' => (string)$row['title'], 'body' => (string)$row['description'],
+            'occurred_at' => (string)($row['completed_at'] ?: $row['updated_at']), 'actor' => (string)($row['full_name'] ?? 'Non attribuée'),
+            'status' => (string)$row['status'], 'meta' => 'Tâche',
+        ];
+    }
+    foreach (crm_fetch_all(
+        'SELECT d.*,u.full_name FROM documents d LEFT JOIN users u ON u.id=d.uploaded_by
+         WHERE d.' . $column . '=? AND d.deleted_at IS NULL ORDER BY d.created_at DESC LIMIT ' . (int)$limit,
+        [$recordId]
+    ) as $row) {
+        $items[] = [
+            'kind' => 'document', 'title' => (string)$row['original_name'],
+            'body' => ucfirst((string)$row['category']) . ' · ' . crm_human_bytes((int)$row['size_bytes']),
+            'occurred_at' => (string)$row['created_at'], 'actor' => (string)($row['full_name'] ?? 'Système'),
+            'status' => '', 'meta' => 'Document',
+        ];
+    }
+    foreach (crm_fetch_all(
+        'SELECT c.*,u.full_name FROM communications c LEFT JOIN users u ON u.id=c.created_by
+         WHERE c.' . $column . '=? AND c.deleted_at IS NULL ORDER BY c.occurred_at DESC LIMIT ' . (int)$limit,
+        [$recordId]
+    ) as $row) {
+        $communicationLabel = match ((string)$row['delivery_status']) {
+            'sent' => 'Envoyé',
+            'failed' => 'Échec d’envoi',
+            default => (string)$row['direction'] === 'inbound' ? 'Reçu' : 'Consigné',
+        };
+        $items[] = [
+            'kind' => (string)$row['channel'], 'title' => (string)$row['subject'], 'body' => (string)$row['body'],
+            'occurred_at' => (string)$row['occurred_at'], 'actor' => (string)($row['full_name'] ?? 'Système'),
+            'status' => (string)$row['delivery_status'],
+            'meta' => $communicationLabel . ' · ' . ucfirst((string)$row['channel']),
+        ];
+    }
+
+    usort($items, static fn(array $a, array $b): int => strcmp($b['occurred_at'], $a['occurred_at']));
+    return array_slice($items, 0, $limit);
 }
 
 function crm_current_user(): ?array
@@ -740,20 +931,29 @@ function crm_run_automations(string $event, array $context): void
         $action = is_array($actions) ? (string)($actions['action'] ?? '') : '';
         $ownerId = (int)($context['owner_id'] ?? 0);
         $leadId = (int)($context['lead_id'] ?? 0);
-        $leadName = (string)($context['name'] ?? 'Nouveau lead');
+        $opportunityId = (int)($context['opportunity_id'] ?? 0);
+        $contactId = (int)($context['contact_id'] ?? 0);
+        $companyId = (int)($context['company_id'] ?? 0);
+        $recordName = (string)($context['name'] ?? 'Élément CRM');
+        $link = $leadId > 0 ? '/admin/?view=leads&id=' . $leadId : ($opportunityId > 0 ? '/admin/?view=pipeline&id=' . $opportunityId : '/admin/?view=tasks');
 
         if ($action === 'notify_owner' && $ownerId > 0) {
-            crm_notify_user($ownerId, 'automation', (string)$rule['name'], $leadName, '/admin/?view=leads&id=' . $leadId);
+            crm_notify_user($ownerId, 'automation', (string)$rule['name'], $recordName, $link);
         } elseif ($action === 'notify_admin') {
-            crm_notify_users('automation', (string)$rule['name'], $leadName, '/admin/?view=leads&id=' . $leadId, ['admin']);
-        } elseif ($action === 'create_followup' && $leadId > 0) {
+            crm_notify_users('automation', (string)$rule['name'], $recordName, $link, ['admin']);
+        } elseif ($action === 'create_followup' && ($leadId > 0 || $opportunityId > 0 || $contactId > 0 || $companyId > 0)) {
+            $delayDays = max(0, min(365, (int)($actions['delay_days'] ?? 2)));
+            $priority = in_array((string)($actions['priority'] ?? ''), ['low','normal','high','urgent'], true)
+                ? (string)$actions['priority'] : 'normal';
+            $taskTitle = trim((string)($actions['task_title'] ?? 'Relancer · {{name}}'));
+            $taskTitle = str_replace('{{name}}', $recordName, $taskTitle) ?: ('Relancer · ' . $recordName);
             crm_execute(
-                'INSERT INTO tasks(uid,title,description,status,priority,due_at,assigned_to,created_by,lead_id,created_at,updated_at)
-                 VALUES(?,?,?,"open","normal",?,?,?,?,?,?)',
+                'INSERT INTO tasks(uid,title,description,status,priority,due_at,assigned_to,created_by,contact_id,company_id,lead_id,opportunity_id,created_at,updated_at)
+                 VALUES(?,?,?,"open",?,?,?,?,?,?,?,?,?,?)',
                 [
-                    crm_uid(), 'Relancer · ' . $leadName, 'Tâche créée automatiquement.',
-                    gmdate('Y-m-d H:i:s', time() + 2 * 86400), $ownerId ?: null, $ownerId ?: null,
-                    $leadId, crm_now(), crm_now(),
+                    crm_uid(), $taskTitle, 'Tâche créée automatiquement par « ' . $rule['name'] . ' ».',
+                    $priority, gmdate('Y-m-d H:i:s', time() + $delayDays * 86400), $ownerId ?: null, $ownerId ?: null,
+                    $contactId ?: null, $companyId ?: null, $leadId ?: null, $opportunityId ?: null, crm_now(), crm_now(),
                 ]
             );
         }
@@ -881,6 +1081,7 @@ function crm_create_company(array $data, ?int $userId): int
     );
     $id = crm_last_id();
     crm_audit('create', 'company', $id, 'Entreprise créée', ['name' => $data['name']], $userId);
+    crm_ensure_company_onboarding($id, $userId);
     return $id;
 }
 
@@ -925,6 +1126,13 @@ function crm_create_lead(array $data, ?int $userId = null): int
     );
     $id = crm_last_id();
     crm_audit('create', 'lead', $id, 'Lead créé', ['name' => $data['name']], $userId);
+    crm_run_automations('lead.created', [
+        'lead_id' => $id,
+        'name' => (string)$data['name'],
+        'owner_id' => (int)($data['owner_id'] ?? $userId ?? 0),
+        'contact_id' => (int)($data['contact_id'] ?? 0),
+        'company_id' => (int)($data['company_id'] ?? 0),
+    ]);
     return $id;
 }
 

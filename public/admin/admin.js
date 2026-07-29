@@ -82,6 +82,30 @@ document.querySelectorAll("input[type='file']").forEach((input) => {
   });
 });
 
+document.querySelector("[data-copy-calendar]")?.addEventListener("click", async (event) => {
+  const input = document.querySelector("[data-calendar-url]");
+  if (!input) return;
+  try {
+    await navigator.clipboard.writeText(input.value);
+    event.currentTarget.textContent = "Copié";
+  } catch {
+    input.select();
+    document.execCommand("copy");
+    event.currentTarget.textContent = "Copié";
+  }
+});
+
+const automationAction = document.querySelector("[data-automation-action]");
+const updateAutomationFields = () => {
+  const visible = automationAction?.value === "create_followup";
+  document.querySelectorAll(".automation-followup-field").forEach((field) => {
+    field.hidden = !visible;
+    field.querySelectorAll("input, select").forEach((control) => { control.disabled = !visible; });
+  });
+};
+automationAction?.addEventListener("change", updateAutomationFields);
+updateAutomationFields();
+
 const confirmDialog = document.querySelector("#confirm-dialog");
 let pendingConfirmation = null;
 document.querySelectorAll("form[data-confirm]").forEach((form) => {
